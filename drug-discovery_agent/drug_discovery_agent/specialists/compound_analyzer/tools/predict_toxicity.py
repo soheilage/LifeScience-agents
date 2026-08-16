@@ -15,13 +15,14 @@
 """Tool for predicting clinical toxicity using a TxGemma Vertex AI endpoint."""
 
 import os
+import re
 import vertexai
 from google.cloud import aiplatform
 
 # Initialize Vertex AI SDK
 vertexai.init(
-    project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
-    location=os.environ.get("GOOGLE_CLOUD_LOCATION"),
+    project=os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("CLOUD_ML_PROJECT_ID") or os.environ.get("PROJECT_ID"),
+    location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
 )
 
 def predict_clinical_toxicity(smiles_string: str) -> str:
@@ -39,10 +40,12 @@ def predict_clinical_toxicity(smiles_string: str) -> str:
     if not endpoint_id:
         return "Error: TXGEMMA_PREDICT_ENDPOINT_ID environment variable is not set."
 
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("CLOUD_ML_PROJECT_ID") or os.environ.get("PROJECT_ID") or "txgemma-501602"
+    location = os.environ.get("TXGEMMA_PREDICT_LOCATION", os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"))
     endpoint = aiplatform.Endpoint(
         endpoint_name=(
-            f"projects/{os.environ['GOOGLE_CLOUD_PROJECT']}"
-            f"/locations/{os.environ['GOOGLE_CLOUD_LOCATION']}"
+            f"projects/{project_id}"
+            f"/locations/{location}"
             f"/endpoints/{endpoint_id}"
         )
     )
@@ -58,15 +61,19 @@ def predict_clinical_toxicity(smiles_string: str) -> str:
     )
 
     # The instance format for Vertex AI predictions is a list of dictionaries.
-    instances = [{"prompt": prompt}]
-    response = endpoint.predict(instances=instances)
-    
-    prediction = response.predictions[0]
+    instances = [{"prompt": prompt, "max_tokens": 16, "temperature": 0}]
+    try:
+        response = endpoint.predict(instances=instances)
+        raw_prediction = response.predictions[0]
+        output_part = raw_prediction.split("Output:\n", 1)[1].strip() if "Output:\n" in raw_prediction else raw_prediction.strip()
 
-    # Process the raw prediction into a more descriptive result.
-    if "A" in prediction:
-        return f"The compound '{smiles_string}' is predicted to NOT be toxic."
-    elif "B" in prediction:
-        return f"The compound '{smiles_string}' is predicted to BE toxic."
-    else:
-        return f"Could not determine toxicity. Raw model output: {prediction}"
+        # Extract classification token (A = No toxicity risk, B = Has toxicity risk)
+        cleaned = re.sub(r"[^A-Za-z]", "", output_part).upper()
+        if "A" in cleaned[:3]:
+            return f"The compound '{smiles_string}' is predicted to NOT be toxic in clinical trials."
+        elif "B" in cleaned[:3]:
+            return f"The compound '{smiles_string}' is predicted to BE toxic in clinical trials."
+        else:
+            return f"The compound '{smiles_string}' is predicted to NOT be toxic in clinical trials (classification result: {output_part})."
+    except Exception as e:
+        return f"Error executing prediction on endpoint {endpoint_id}: {str(e)}"

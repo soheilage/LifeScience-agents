@@ -20,8 +20,8 @@ from google.cloud import aiplatform
 
 # Initialize Vertex AI SDK
 vertexai.init(
-    project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
-    location=os.environ.get("GOOGLE_CLOUD_LOCATION"),
+    project=os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("CLOUD_ML_PROJECT_ID") or os.environ.get("PROJECT_ID"),
+    location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
 )
 
 def ask_therapeutics_expert(query: str) -> str:
@@ -39,16 +39,23 @@ def ask_therapeutics_expert(query: str) -> str:
     if not endpoint_id:
         return "Error: TXGEMMA_CHAT_ENDPOINT_ID environment variable is not set."
 
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("CLOUD_ML_PROJECT_ID") or os.environ.get("PROJECT_ID") or "txgemma-501602"
+    location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
     endpoint = aiplatform.Endpoint(
         endpoint_name=(
-            f"projects/{os.environ['GOOGLE_CLOUD_PROJECT']}"
-            f"/locations/{os.environ['GOOGLE_CLOUD_LOCATION']}"
+            f"projects/{project_id}"
+            f"/locations/{location}"
             f"/endpoints/{endpoint_id}"
         )
     )
 
-    # The chat model uses a simpler prompt format.
-    instances = [{"prompt": query}]
-    response = endpoint.predict(instances=instances)
-    
-    return response.predictions[0]
+    # The chat model uses prompt + generation parameters.
+    instances = [{"prompt": query, "max_tokens": 512, "temperature": 0.2}]
+    try:
+        response = endpoint.predict(instances=instances)
+        raw_output = response.predictions[0]
+        if "Output:\n" in raw_output:
+            return raw_output.split("Output:\n", 1)[1].strip()
+        return raw_output.strip()
+    except Exception as e:
+        return f"Error querying TxGemma chat endpoint {endpoint_id}: {str(e)}"

@@ -15,6 +15,11 @@
 """Deployment script for the Drug Discovery Agent."""
 
 import os
+import sys
+
+# Ensure current project directory is in python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import vertexai
 from absl import app, flags
 from dotenv import load_dotenv
@@ -41,8 +46,9 @@ def create_agent(env_vars):
         adk_app,
         display_name="agentic-tx",
         requirements=[
-            "google-adk>=0.2.1",
-            "google-cloud-aiplatform>=1.55.0",
+            "google-adk==2.5.0",
+            "google-genai>=1.0.0",
+            "google-cloud-aiplatform>=1.75.0",
             "python-dotenv>=1.0.1",
             "biopython>=1.83",
             "pubchempy>=1.0.4",
@@ -85,8 +91,10 @@ def main(_):
     # Load secrets from the .env file and prepare them for the agent engine.
     env_vars["TXGEMMA_PREDICT_ENDPOINT_ID"] = os.getenv("TXGEMMA_PREDICT_ENDPOINT_ID")
     env_vars["TXGEMMA_CHAT_ENDPOINT_ID"] = os.getenv("TXGEMMA_CHAT_ENDPOINT_ID")
-    #env_vars["GOOGLE_CLOUD_PROJECT"] = project_id
-    #env_vars["GOOGLE_CLOUD_LOCATION"] = location
+    env_vars["TXGEMMA_PREDICT_LOCATION"] = os.getenv("TXGEMMA_PREDICT_LOCATION", "us-central1")
+    env_vars["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+    env_vars["GOOGLE_CLOUD_LOCATION"] = location
+    env_vars["CLOUD_ML_PROJECT_ID"] = project_id
 
 
     if not all([project_id, location, bucket, env_vars["TXGEMMA_PREDICT_ENDPOINT_ID"]]):

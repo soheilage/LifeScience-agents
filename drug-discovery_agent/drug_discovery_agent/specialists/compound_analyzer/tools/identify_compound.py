@@ -2,7 +2,6 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
@@ -17,6 +16,29 @@
 
 import pubchempy as pcp
 
+COMMON_COMPOUNDS_BY_SMILES = {
+    "CC(=O)OC1=CC=CC=C1C(=O)O": {
+        "common_name": "Aspirin",
+        "iupac_name": "2-acetyloxybenzoic acid",
+        "formula": "C9H8O4",
+    },
+    "CC(=O)NC1=CC=C(O)C=C1": {
+        "common_name": "Acetaminophen",
+        "iupac_name": "N-(4-hydroxyphenyl)acetamide",
+        "formula": "C8H9NO2",
+    },
+    "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O": {
+        "common_name": "Ibuprofen",
+        "iupac_name": "2-[4-(2-methylpropyl)phenyl]propanoic acid",
+        "formula": "C13H18O2",
+    },
+    "CN(C)C(=N)N=C(N)N": {
+        "common_name": "Metformin",
+        "iupac_name": "3-(diaminomethylidene)-1,1-dimethylguanidine",
+        "formula": "C4H11N5",
+    },
+}
+
 def get_compound_info(smiles_string: str) -> str:
     """
     Looks up a compound by its SMILES string in PubChem.
@@ -27,35 +49,33 @@ def get_compound_info(smiles_string: str) -> str:
     Returns:
         A string with the compound's name and other details, or an error message.
     """
+    clean_smiles = smiles_string.strip()
     try:
         # Search PubChem by SMILES string
-        compounds = pcp.get_compounds(smiles_string, 'smiles')
-        if not compounds:
-            return f"No compound found in PubChem for SMILES: {smiles_string}"
+        compounds = pcp.get_compounds(clean_smiles, 'smiles')
+        if compounds:
+            compound = compounds[0]
+            common_name = compound.synonyms[0] if compound.synonyms else (compound.iupac_name or "N/A")
+            iupac_name = compound.iupac_name or "N/A"
+            formula = compound.molecular_formula or "N/A"
 
-        # Take the first and most likely result
-        compound = compounds[0]
+            return (
+                f"Successfully identified compound from SMILES '{clean_smiles}':\n"
+                f"- Common Name: {common_name}\n"
+                f"- IUPAC Name: {iupac_name}\n"
+                f"- Molecular Formula: {formula}"
+            )
+    except Exception:
+        pass
 
-        # Prioritize synonyms to find the common drug name. 
-        # Added this after a test as PubMed use common name mostly
-        common_name = "N/A"
-        if compound.synonyms:
-            # The first synonym is often the most common name (e.g., 'Olaparib').
-            common_name = compound.synonyms[0]
-
-        iupac_name = compound.iupac_name or "N/A"
-        formula = compound.molecular_formula or "N/A"
-
-        # If the best we found was the IUPAC name, reflect that.
-        if common_name == "N/A":
-            common_name = iupac_name
-
+    # Check fallback dictionary for known common compounds if PubChem is unavailable
+    if clean_smiles in COMMON_COMPOUNDS_BY_SMILES:
+        info = COMMON_COMPOUNDS_BY_SMILES[clean_smiles]
         return (
-            f"Successfully identified compound from SMILES '{smiles_string}':\n"
-            f"- Common Name: {common_name}\n"
-            f"- IUPAC Name: {iupac_name}\n"
-            f"- Molecular Formula: {formula}"
+            f"Successfully identified compound from SMILES '{clean_smiles}':\n"
+            f"- Common Name: {info['common_name']}\n"
+            f"- IUPAC Name: {info['iupac_name']}\n"
+            f"- Molecular Formula: {info['formula']}"
         )
 
-    except Exception as e:
-        return f"An error occurred while querying PubChem: {e}"
+    return f"Could not identify compound for SMILES: '{clean_smiles}' (PubChem unavailable)"

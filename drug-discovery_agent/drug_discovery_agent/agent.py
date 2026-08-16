@@ -14,9 +14,16 @@
 # limitations under the License.
 
 """Defines the main 'discovery_coordinator' agent."""
+import os
 
-from google.adk.agents import LlmAgent
-from google.adk.tools.agent_tool import AgentTool
+# Ensure project details and Vertex AI mode are set for ADK models
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+    os.environ["GOOGLE_CLOUD_PROJECT"] = os.environ.get("CLOUD_ML_PROJECT_ID", "txgemma-501602")
+if not os.environ.get("GOOGLE_CLOUD_LOCATION"):
+    os.environ["GOOGLE_CLOUD_LOCATION"] = "us-central1"
+
+from google.adk.agents import Agent
 
 from . import prompt
 
@@ -26,14 +33,14 @@ from .specialists.literature_researcher import agent as literature_researcher_ag
 # Use a powerful model for the coordinator's reasoning.
 MODEL = "gemini-2.5-pro"
 
-discovery_coordinator = LlmAgent(
+discovery_coordinator = Agent(
     name="discovery_coordinator",
     model=MODEL,
     description="The main agent that coordinates drug discovery tasks.",
     instruction=prompt.DISCOVERY_COORDINATOR_PROMPT,
-    tools=[
-        AgentTool(agent=compound_analyzer_agent.compound_analyzer),
-        AgentTool(agent=literature_researcher_agent.literature_researcher),
+    sub_agents=[
+        compound_analyzer_agent.compound_analyzer,
+        literature_researcher_agent.literature_researcher,
     ],
 )
 
