@@ -1,7 +1,35 @@
 # Agentic-Tx: A Drug Discovery Research Agent
 (Demo recording at the end of the README)
 
-<img width="1140" height="850" alt="LifeScience Diagrams - Page 2 (1)" src="https://github.com/user-attachments/assets/89d3adfd-e794-4ee1-b152-227f7958cb8d" />
+```mermaid
+graph TD
+    User([User Query]) --> Coordinator["Discovery Coordinator<br/><b>(Main Agent: Gemini 2.5 Pro)</b>"]
+    
+    Coordinator --> |Decomposes & Delegates| CompoundAnalyzer["Compound Analyzer<br/><b>(Specialist: Gemini 3.6 Flash)</b>"]
+    Coordinator --> |Decomposes & Delegates| LiteratureResearcher["Literature Researcher<br/><b>(Specialist: Gemini 3.6 Flash)</b>"]
+    
+    subgraph CompoundTools ["🧪 Compound Analyzer Tools"]
+        CompoundAnalyzer --> PubChemInfo["identify_compound<br/><i>(PubChem Database)</i>"]
+        CompoundAnalyzer --> PubChemSmiles["get_smiles_from_name<br/><i>(PubChem Database)</i>"]
+        CompoundAnalyzer --> TxGemmaPredict["predict_clinical_toxicity<br/><b>(Vertex AI: TxGemma 9B Predict)</b>"]
+    end
+    
+    subgraph LiteratureTools ["📚 Literature Researcher Tools"]
+        LiteratureResearcher --> PubMedSearch["fetch_pubmed_articles<br/><i>(NCBI PubMed API)</i>"]
+        LiteratureResearcher --> TxGemmaChat["ask_therapeutics_expert<br/><b>(Vertex AI: TxGemma 9B Chat)</b>"]
+    end
+    
+    CompoundAnalyzer -.-> |Chemical & Toxicity Evidence| Coordinator
+    LiteratureResearcher -.-> |Therapeutic & Context Evidence| Coordinator
+    
+    Coordinator --> |Synthesizes Final Report| Output([Structured Response:<br/>Execution Plan + Comprehensive Analysis])
+
+    style Coordinator fill:#1a73e8,stroke:#174ea6,stroke-width:2px,color:#fff
+    style CompoundAnalyzer fill:#34a853,stroke:#137333,stroke-width:2px,color:#fff
+    style LiteratureResearcher fill:#ea4335,stroke:#b31412,stroke-width:2px,color:#fff
+    style TxGemmaPredict fill:#fbbc04,stroke:#e37400,stroke-width:2px,color:#000
+    style TxGemmaChat fill:#fbbc04,stroke:#e37400,stroke-width:2px,color:#000
+```
 
 
 
@@ -121,16 +149,6 @@ This modular structure makes the agent easy to maintain and extend with new tool
 ## Agent Usage
 Google AgentSpace is used for the demo. 
 
-<<<<<<< HEAD
-Own front-end UI can be built and call Agent engine's Agent API. (might try to add that frontend UI later)
-=======
-Own front-end UI can be built and call Agent engine's Agent API. (might try to add that frontend UI later)
-
+Own front-end UI can be built and call Agent Engine's Agent API.
 
 https://github.com/user-attachments/assets/c3692adb-27a6-4c97-a460-8c3f059b1c2f
-
-
-
-
-
->>>>>>> 4cc6ddda01aa13936bb42c7150f657f153e28de6
