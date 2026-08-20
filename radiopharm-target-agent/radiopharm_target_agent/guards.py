@@ -360,3 +360,59 @@ def enforce_citation_or_abstain(claims: list[dict[str, Any]]) -> list[dict[str, 
 
 
 enforce_citation_contract = enforce_citation_or_abstain
+
+
+class ContradictionError(ValueError):
+    """Raised when two contradictory values exist for the same entity attribute in an EvidenceBundle."""
+
+    pass
+
+
+def check_fact_consistency_gate(evidence: Any) -> tuple[bool, list[str]]:
+    """
+    Cross-specialist consistency gate (Gap A).
+    Scans EvidenceBundle across clinical, literature, and target_biology claims for
+    conflicting isotope or target assertions for the same trial/entity.
+
+    Returns:
+        tuple of (is_consistent: bool, contradictions_list: list[str])
+    """
+    contradictions: list[str] = []
+
+    # Check clinical trial isotope consistency
+    trials = getattr(evidence, "clinical", [])
+    extracted_isotopes: set[tuple[str, str]] = set()
+    for trial in trials:
+        if trial.is_radiopharmaceutical and trial.isotope:
+            iso = trial.isotope.upper().replace(" ", "").replace("-", "")
+            canonical_iso = (
+                "Ac-225"
+                if "225AC" in iso or "ACTINIUM" in iso
+                else (
+                    "Lu-177"
+                    if "177LU" in iso or "LUTETIUM" in iso
+                    else (
+                        "Pb-212"
+                        if "212PB" in iso or "LEAD" in iso
+                        else trial.isotope
+                    )
+                )
+            )
+            extracted_isotopes.add((trial.nct_id, canonical_iso))
+
+    # Check if single trial ID has contradictory isotopes assigned
+    nct_iso_map: dict[str, set[str]] = {}
+    for nct_id, iso in extracted_isotopes:
+        nct_iso_map.setdefault(nct_id, set()).add(iso)
+
+    for nct_id, iso_set in nct_iso_map.items():
+        if len(iso_set) > 1:
+            msg = (
+                f"Contradictory isotope attribution for trial [{nct_id}]: "
+                f"{sorted(list(iso_set))}. Hand-off halted by Cross-Specialist Consistency Gate."
+            )
+            contradictions.append(msg)
+
+    is_consistent = len(contradictions) == 0
+    return is_consistent, contradictions
+

@@ -114,3 +114,57 @@ def test_citation_enforcement():
     assert filtered[0]["status"] == "measured"
     assert filtered[1]["status"] == "unavailable"
     assert filtered[1]["value"] is None
+
+
+def test_fact_consistency_gate_contradiction_halts_run():
+    """
+    Gap A Regression Test: Injecting two contradictory isotope claims for the same trial ID
+    causes check_fact_consistency_gate to fail and compute_target_scorecard to halt with 'halt_on_contradiction'.
+    """
+    from datetime import datetime, timezone
+    from radiopharm_target_agent.guards import check_fact_consistency_gate
+    from radiopharm_target_agent.schemas import EvidenceBundle, RunProvenance, SourceRef, TrialRecord
+    from radiopharm_target_agent.scorer import compute_target_scorecard
+
+    # Contradictory trial records for same NCT05477576 (Ac-225 vs Lu-177)
+    t1 = TrialRecord(
+        nct_id="NCT05477576",
+        title="ACTION-1 Ac-225 Arm",
+        phase="Phase 1b",
+        status="Recruiting",
+        modalities=["therapy"],
+        is_radiopharmaceutical=True,
+        isotope="Ac-225",
+        sources=[SourceRef(kind="ctgov", identifier="NCT05477576", version="API_v2")],
+    )
+    t2 = TrialRecord(
+        nct_id="NCT05477576",
+        title="ACTION-1 Lu-177 Arm (Contradictory Injection)",
+        phase="Phase 1b",
+        status="Recruiting",
+        modalities=["therapy"],
+        is_radiopharmaceutical=True,
+        isotope="Lu-177",
+        sources=[SourceRef(kind="ctgov", identifier="NCT05477576", version="API_v2")],
+    )
+
+    bundle = EvidenceBundle(
+        target="SSTR2",
+        gene_id="ENSG00000180616",
+        indication="gastroenteropancreatic neuroendocrine tumours",
+        isotope_context="Ac-225",
+        clinical=[t1, t2],
+        provenance=RunProvenance(timestamp=datetime.now(timezone.utc)),
+    )
+
+    is_consistent, contradictions = check_fact_consistency_gate(bundle)
+    assert is_consistent is False
+    assert len(contradictions) == 1
+    assert "Contradictory isotope attribution" in contradictions[0]
+
+    # Verify compute_target_scorecard halts
+    scorecard = compute_target_scorecard(bundle)
+    assert scorecard.recommendation == "halt_on_contradiction"
+    assert scorecard.total_score == 0.0
+    assert len(scorecard.failure_reasons) == 1
+

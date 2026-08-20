@@ -641,6 +641,25 @@ def compute_target_scorecard(
             provenance=evidence.provenance,
         )
 
+    # 1.5 HARD GATE: Cross-Specialist Consistency Gate
+    from .guards import check_fact_consistency_gate
+    is_consistent, contradictions = check_fact_consistency_gate(evidence)
+    if not is_consistent:
+        return Scorecard(
+            target=target,
+            gene_id=evidence.gene_id,
+            indication=evidence.indication,
+            isotope_context=isotope,
+            vector_class=vector,
+            total_score=0.0,
+            rank=None,
+            axes={},
+            recommendation="halt_on_contradiction",
+            failure_reasons=contradictions,
+            caveats=["Run halted by Cross-Specialist Consistency Gate (Gap A)."],
+            provenance=evidence.provenance,
+        )
+
     # 2. Compute 8 individual axes
     axis_selectivity = _score_tumour_selectivity(evidence, tier_caps)
     axis_oar = _score_oar_safety_margin(evidence, isotope, oar_weights, mod_config, config)

@@ -55,7 +55,7 @@ TARGET_BIOLOGY_DB: dict[str, dict[str, Any]] = {
             "status": "rapid",
             "rate_constant": "t1/2 ~ 15-30 min upon agonist binding",
             "mechanism": "Agonist-induced beta-arrestin recruitment, rapid internalization into endosomes, recycling and intracellular radioligand trapping.",
-            "citations": ["PMID:11823439", "PMID:12704090"],
+            "citations": ["PMID:19443580", "PMID:16513620"],
         },
         "shedding": {
             "status": "not_reported",

@@ -57,7 +57,7 @@ HPA_GTEX_REFERENCE_DB: dict[str, dict[str, Any]] = {
     "SSTR2": {
         "ensembl_id": "ENSG00000180616",
         "symbol": "SSTR2",
-        "hpa_antibody_reliability": "Approved (CAB004523)",
+        "hpa_antibody_reliability": "Approved (HPA007264)",
         "gtex_median_normal_tpm": 2.4,
         "tumour_fpkm_tcga": {
             "neuroendocrine_tumors": 410.0,

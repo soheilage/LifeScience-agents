@@ -86,7 +86,7 @@ def test_b2_atlas_checksum_and_metrics():
     # Verify routing metadata carries SHA-256
     routing = res["routing"]
     assert routing["atlas_sha256"] == checksum
-    assert routing["geo_accession"] == "GSE179373"
+    assert routing["geo_accession"] == "GSE211485"
     assert routing["publication_doi"] == "10.1186/s12943-025-02231-y"
 
 
@@ -199,4 +199,4 @@ def test_b8_gep_net_atlas_doi():
     atlas_map = {a["id"]: a for a in registry["atlases"]}
     gep_atlas = atlas_map["GEP_NET_Chan_Atlas_v1"]
     assert gep_atlas["publication_doi"] == "10.1186/s12943-025-02231-y"
-    assert gep_atlas["geo_accession"] == "GSE179373"
+    assert gep_atlas["geo_accession"] == "GSE211485"

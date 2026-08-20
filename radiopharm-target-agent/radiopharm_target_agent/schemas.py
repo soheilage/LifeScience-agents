@@ -230,6 +230,7 @@ class Scorecard(BaseModel):
         "fail_selectivity_gate",
         "withheld_insufficient_evidence",
         "abstain_unrecognized_target",
+        "halt_on_contradiction",
     ]
     failure_reasons: list[str] = Field(default_factory=list)
     caveats: list[str] = Field(default_factory=list)

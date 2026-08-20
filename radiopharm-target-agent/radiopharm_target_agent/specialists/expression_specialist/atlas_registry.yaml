@@ -121,7 +121,7 @@ atlases:
       - endothelial
     n_cells: 24800
     n_patients: 18
-    geo_accession: "GSE179373"
+    geo_accession: "GSE211485"
     annotation_source: "Zhou et al. Mol Cancer 2025 / Alvarez et al. Nat Commun 2020"
     publication_doi: "10.1186/s12943-025-02231-y"
     verified_on: "2026-08-21"
