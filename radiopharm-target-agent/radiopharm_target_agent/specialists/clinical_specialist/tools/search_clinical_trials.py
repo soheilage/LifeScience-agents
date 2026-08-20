@@ -16,7 +16,7 @@
 Tool for searching and classifying clinical trials on ClinicalTrials.gov API v2.
 
 Implements radiopharm modality classification (therapy vs diagnostic vs ADC vs cell therapy),
-isotope detection, and structured TrialRecord emission.
+intervention-based isotope detection, and structured TrialRecord emission.
 """
 
 import re
@@ -30,14 +30,36 @@ from radiopharm_target_agent.schemas import SourceRef, TrialRecord
 
 BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
+# Known canonical radiopharmaceutical drugs & isotope mappings
+KNOWN_RADIOPHARM_DRUG_MAP = {
+    "RYZ101": {"isotope": "Ac-225", "modality": "therapy"},
+    "225AC-DOTATATE": {"isotope": "Ac-225", "modality": "therapy"},
+    "ALPHAMEDIX": {"isotope": "Pb-212", "modality": "therapy"},
+    "212PB-DOTAMTATE": {"isotope": "Pb-212", "modality": "therapy"},
+    "177LU-DOTATATE": {"isotope": "Lu-177", "modality": "therapy"},
+    "LUTATHERA": {"isotope": "Lu-177", "modality": "therapy"},
+    "177LU-PSMA-617": {"isotope": "Lu-177", "modality": "therapy"},
+    "PLUVICTO": {"isotope": "Lu-177", "modality": "therapy"},
+    "177LU-PSMA-I&T": {"isotope": "Lu-177", "modality": "therapy"},
+    "225AC-PSMA-617": {"isotope": "Ac-225", "modality": "therapy"},
+    "68GA-DOTATATE": {"isotope": "Ga-68", "modality": "diagnostic"},
+    "NETSPOT": {"isotope": "Ga-68", "modality": "diagnostic"},
+    "68GA-DOTATOC": {"isotope": "Ga-68", "modality": "diagnostic"},
+    "68GA-PSMA-11": {"isotope": "Ga-68", "modality": "diagnostic"},
+    "LOCAMETZ": {"isotope": "Ga-68", "modality": "diagnostic"},
+    "18F-DCFPYL": {"isotope": "F-18", "modality": "diagnostic"},
+    "PYLARIFY": {"isotope": "F-18", "modality": "diagnostic"},
+    "18F-PSMA-1007": {"isotope": "F-18", "modality": "diagnostic"},
+}
+
 # Radionuclide definitions
 THERAPY_ISOTOPES = {
-    "Lu-177": ["177lu", "lu-177", "lutetium-177", "lutetium 177", "177lutetium"],
     "Ac-225": ["225ac", "ac-225", "actinium-225", "actinium 225", "225actinium"],
+    "Lu-177": ["177lu", "lu-177", "lutetium-177", "lutetium 177", "177lutetium"],
+    "Pb-212": ["212pb", "pb-212", "lead-212", "lead 212"],
     "I-131": ["131i", "i-131", "iodine-131", "iodine 131", "131iodine"],
     "Y-90": ["90y", "y-90", "yttrium-90", "yttrium 90", "90yttrium"],
     "Tb-161": ["161tb", "tb-161", "terbium-161", "terbium 161"],
-    "Pb-212": ["212pb", "pb-212", "lead-212", "lead 212"],
 }
 
 DIAGNOSTIC_ISOTOPES = {
@@ -70,7 +92,7 @@ CELL_THERAPY_KEYWORDS = [
     "nk cell",
 ]
 
-# RLT with word boundaries so 'tat' does not match 'prostate'
+# RLT with word boundaries
 RLT_REGEX = re.compile(
     r"\b(?:radioligand therapy|targeted radionuclide therapy|peptide receptor radionuclide therapy|prrt|targeted alpha therapy|tat|radiopharmaceutical therapy)\b",
     re.IGNORECASE,
@@ -79,62 +101,71 @@ RLT_REGEX = re.compile(
 
 def classify_modalities_and_isotopes(
     text: str,
+    interventions: list[dict[str, Any]] | None = None,
 ) -> tuple[list[str], str | None, bool]:
     """
-    Classifies a study's text into radiopharmaceutical modalities and isotopes.
+    Classifies a study's text and interventions into radiopharmaceutical modalities and isotopes.
 
-    Rules:
-    - Diagnostic PET trials (e.g. 68Ga, 18F) are labeled 'diagnostic' and NOT 'therapy'.
-    - Radioligand therapies (e.g. 177Lu, 225Ac) are labeled 'therapy'.
-    - ADCs and Cell therapies are classified separately.
-
-    Returns:
-        tuple of (modalities_list, primary_isotope, is_radiopharmaceutical)
+    Prioritizes investigational intervention fields over title/eligibility mentions
+    to avoid confounding prior lines (e.g. 'following 177Lu-SSA') with trial payload (e.g. RYZ101 / Ac-225).
     """
-    text_lower = text.lower()
     modalities = []
     detected_isotope = None
     is_radiopharm = False
 
-    # Check therapeutic isotopes
-    has_therapy_isotope = False
-    for iso, kws in THERAPY_ISOTOPES.items():
-        if any(kw in text_lower for kw in kws):
-            modalities.append("therapy")
-            detected_isotope = iso
-            has_therapy_isotope = True
-            is_radiopharm = True
-            break
+    # 1. Check intervention list first for canonical drug mappings
+    if interventions:
+        for intv in interventions:
+            name = (intv.get("name") or "").strip().upper()
+            desc = (intv.get("description") or "").strip().upper()
+            full_intv = f"{name} {desc}"
 
-    # Check diagnostic isotopes
-    has_diag_isotope = False
-    for iso, kws in DIAGNOSTIC_ISOTOPES.items():
-        if any(kw in text_lower for kw in kws):
-            detected_isotope = detected_isotope or iso
-            has_diag_isotope = True
-            is_radiopharm = True
-            break
+            for drug, mapping in KNOWN_RADIOPHARM_DRUG_MAP.items():
+                if drug in full_intv or drug.replace("-", "") in full_intv.replace("-", ""):
+                    modalities.append(mapping["modality"])
+                    detected_isotope = mapping["isotope"]
+                    is_radiopharm = True
+                    break
+            if detected_isotope:
+                break
 
-    # RLT regex check with word boundaries
+    # 2. Check text for therapeutic isotopes if not found from canonical map
+    text_lower = text.lower()
+    if not detected_isotope:
+        for iso, kws in THERAPY_ISOTOPES.items():
+            if any(kw in text_lower for kw in kws):
+                modalities.append("therapy")
+                detected_isotope = iso
+                is_radiopharm = True
+                break
+
+    # 3. Check diagnostic isotopes
+    if not detected_isotope:
+        for iso, kws in DIAGNOSTIC_ISOTOPES.items():
+            if any(kw in text_lower for kw in kws):
+                detected_isotope = iso
+                modalities.append("diagnostic")
+                is_radiopharm = True
+                break
+
+    # 4. RLT regex check
     is_rlt = bool(RLT_REGEX.search(text))
     if is_rlt:
-        modalities.append("therapy")
+        if "therapy" not in modalities:
+            modalities.append("therapy")
         is_radiopharm = True
 
-    if has_diag_isotope or any(
-        kw in text_lower for kw in ["pet scan", "spect", "pet/ct", "diagnostic accuracy", "diagnostic imaging"]
-    ):
-        if not is_rlt and not has_therapy_isotope:
+    # 5. Diagnostic imaging check
+    if any(kw in text_lower for kw in ["pet scan", "spect", "pet/ct", "diagnostic imaging"]):
+        if "diagnostic" not in modalities:
             modalities.append("diagnostic")
-            is_radiopharm = True
-        elif has_diag_isotope:
-            modalities.append("diagnostic")
+        is_radiopharm = True
 
-    # ADC check
+    # 6. ADC check
     if any(kw in text_lower for kw in ADC_KEYWORDS):
         modalities.append("ADC")
 
-    # Cell therapy check
+    # 7. Cell therapy check
     if any(kw in text_lower for kw in CELL_THERAPY_KEYWORDS):
         modalities.append("cell_therapy")
 
@@ -211,6 +242,7 @@ def search_trials(
         relaxed_queries = []
         if target.upper() == "SSTR2":
             relaxed_queries.extend([
+                f"RYZ101 {active_iso or ''}",
                 f"DOTATATE {active_iso or ''}",
                 f"DOTATOC {active_iso or ''}",
                 f"SSTR2 {active_iso or ''}",
@@ -266,17 +298,18 @@ def search_trials(
         conditions = conditions_module.get("conditions", [])
 
         arms_module = protocol.get("armsInterventionsModule", {})
-        interventions = [
+        raw_interventions = arms_module.get("interventions", [])
+        interventions_text = [
             i.get("name", "")
-            for i in arms_module.get("interventions", [])
+            for i in raw_interventions
             if i.get("name")
         ]
 
         full_study_text = (
-            f"{title} {' '.join(conditions)} {' '.join(interventions)}"
+            f"{title} {' '.join(conditions)} {' '.join(interventions_text)}"
         )
         modalities, detected_iso, is_radio = classify_modalities_and_isotopes(
-            full_study_text
+            full_study_text, interventions=raw_interventions
         )
 
         # Build SourceRef

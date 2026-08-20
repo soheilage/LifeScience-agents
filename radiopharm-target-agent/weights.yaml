@@ -1,6 +1,6 @@
-# Version 1.0.0 - Radiopharmaceutical Target Prioritization Scoring Weights
-version: "1.0.0"
-description: "Deterministic scoring weights and isotope modulation parameters for radiopharmaceutical target assessment."
+# Version 1.1.0 - Radiopharmaceutical Target Prioritization Scoring Weights
+version: "1.1.0"
+description: "Deterministic scoring weights, delivery accessibility modifiers, and isotope modulation parameters for radiopharmaceutical target assessment."
 
 # Base scoring weights across evaluation axes (sum to 1.0)
 base_weights:
@@ -14,17 +14,71 @@ base_weights:
   tractability: 0.07
 
 # Organ-at-Risk (OAR) Radiosensitivity Weights
-# Organ toxicity impact multipliers for targeted radiotherapy
 oar_radiosensitivity_weights:
-  kidney_cortex: 1.50       # Critical dose-limiting organ for peptide radioligands (renal tubule retention)
+  kidney_cortex: 1.40       # Critical dose-limiting organ for peptide radioligands (renal tubule retention)
   bone_marrow: 1.40         # Hematological toxicity, myelosuppression
   salivary_gland: 1.20      # Dose-limiting for PSMA Ac-225/Lu-177 (xerostomia)
   lacrimal_gland: 1.10      # Ocular toxicity / dry eye
   liver: 1.00               # Hepatic clearance / metabolic burden
-  spleen: 1.00              # Reticuloendothelial uptake
+  spleen: 0.80              # Reticuloendothelial uptake
   gi_tract: 1.00            # Intestinal mucosa toxicity
-  lung: 1.10                # Radiation pneumonitis risk
-  brain: 1.30               # Neurotoxicity
+  lung: 1.00                # Radiation pneumonitis risk
+  brain: 1.20               # Neurotoxicity
+
+# Delivery Accessibility Modifiers (by vector class & biological barrier)
+delivery_accessibility_modifiers:
+  bbb_protected:
+    peptide: 0.05           # Intact BBB excludes hydrophilic peptides (DOTATATE); brain SSTR2 is shielded
+    antibody: 0.02          # Intact BBB excludes large macromolecular IgGs (~150 kDa)
+    nanobody: 0.05
+    small_molecule: 0.80    # Lipophilic small molecules may cross
+    unspecified: 0.10
+  freely_perfused:
+    peptide: 1.00
+    antibody: 1.00
+    nanobody: 1.00
+    small_molecule: 1.00
+    unspecified: 1.00
+  actively_reabsorbing:
+    peptide: 1.00
+    antibody: 1.00
+    nanobody: 1.00
+    small_molecule: 1.00
+    unspecified: 1.00
+
+# Pharmacokinetic Class Liabilities (Non-target-mediated organ absorbed dose)
+pharmacokinetic_class_liabilities:
+  peptide:
+    kidney_cortex:
+      penalty: 1.10
+      mechanism: "Glomerular filtration followed by megalin/cubilin-mediated tubular endocytic reabsorption in proximal renal tubules"
+    bone_marrow:
+      penalty: 0.30
+      mechanism: "Circulating blood-pool transit irradiation"
+  small_molecule:
+    kidney_cortex:
+      penalty: 0.40
+      mechanism: "Renal excretion and tubular filtration"
+    bone_marrow:
+      penalty: 0.20
+      mechanism: "Transient blood-pool circulation"
+  antibody:
+    bone_marrow:
+      penalty: 1.50
+      mechanism: "Prolonged circulation time (t1/2 ~ days) causes continuous marrow cross-irradiation"
+    liver:
+      penalty: 0.80
+      mechanism: "Hepatic reticuloendothelial catabolism and clearance"
+
+# Tractability Scoring Formula Components
+tractability_scoring_formula:
+  baseline_de_novo: 4.00
+  approved_therapeutic_bonus: 3.50     # FDA/EMA approved therapeutic radioligand (e.g. Pluvicto, Lutathera)
+  approved_diagnostic_bonus: 2.00      # FDA/EMA approved PET imaging agent (e.g. Locametz, Netspot, Pylarify)
+  phase2_3_clinical_precedent: 1.50    # Active Phase 2/3 trial evaluating targeted radioligands
+  requested_isotope_precedent: 1.00    # Validated clinical/preclinical data with requested isotope
+  validated_binder_modality: 1.00      # Known high-affinity binder (small molecule / peptide / nanobody)
+  max_score: 10.00
 
 # Isotope Modulation Rules
 isotope_modulation:
@@ -50,7 +104,6 @@ isotope_modulation:
     oar_margin_strictness: 0.90
 
 # Evidence tier score caps
-# Transcript-level evidence caps the achievable selectivity score; protein evidence lifts it.
 evidence_tier_caps:
   protein_quant: 10.0
   protein_ihc: 9.0

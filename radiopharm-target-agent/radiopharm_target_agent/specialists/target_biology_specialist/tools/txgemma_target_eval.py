@@ -58,9 +58,10 @@ TARGET_BIOLOGY_DB: dict[str, dict[str, Any]] = {
             "citations": ["PMID:11823439", "PMID:12704090"],
         },
         "shedding": {
+            "status": "not_reported",
             "is_shed": False,
-            "description": "No shed circulating soluble receptor reported.",
-            "citations": ["PMID:12704090"],
+            "description": "No shed circulating soluble receptor reported in retrieved literature.",
+            "citations": [],
         },
     },
     "FAP": {
@@ -369,10 +370,10 @@ def evaluate_target_biology(target_symbol: str) -> dict[str, Any]:
         "shedding_risk": Claim(
             field="shedding_risk",
             value=shedding["is_shed"],
-            status="measured",
-            evidence_tier="literature",
+            status=shedding.get("status", "measured" if shed_sources else "not_reported"),
+            evidence_tier="literature" if shed_sources else "absent",
             sources=shed_sources,
-            confidence="high",
+            confidence="low" if shedding.get("status") == "not_reported" or not shed_sources else "high",
             caveats=[shedding["description"]],
         ),
     }

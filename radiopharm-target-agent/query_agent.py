@@ -119,15 +119,31 @@ def evaluate_single_target(
             )
         )
     elif canonical == "SSTR2":
-        clinical_records.append(
+        clinical_records.extend([
+            TrialRecord(
+                nct_id="NCT05477576",
+                title="Phase 1b/3 Study of 225Ac-DOTATATE (RYZ101) in GEP-NETs (ACTION-1)",
+                phase="Phase 1b/Phase 3",
+                status="Recruiting",
+                modalities=["therapy"],
+                is_radiopharmaceutical=True,
+                isotope="Ac-225",
+                sources=[
+                    SourceRef(
+                        kind="ctgov",
+                        identifier="NCT05477576",
+                        version="API_v2",
+                    )
+                ],
+            ),
             TrialRecord(
                 nct_id="NCT01578239",
-                title=f"Phase 3 Trial of {isotope}-{canonical} PRRT (NETTER-1)",
+                title=f"Phase 3 Trial of Lu-177-{canonical} PRRT (NETTER-1)",
                 phase="Phase 3",
                 status="Completed",
                 modalities=["therapy"],
                 is_radiopharmaceutical=True,
-                isotope=isotope,
+                isotope="Lu-177",
                 sources=[
                     SourceRef(
                         kind="ctgov",
@@ -135,8 +151,8 @@ def evaluate_single_target(
                         version="API_v2",
                     )
                 ],
-            )
-        )
+            ),
+        ])
 
     lit_records = [
         LiteratureFinding(
@@ -154,11 +170,14 @@ def evaluate_single_target(
         )
     ]
 
+    vector_class = "peptide" if canonical == "SSTR2" else ("small_molecule" if canonical == "FOLH1" else ("antibody" if canonical == "STEAP1" else "peptide"))
+
     bundle = EvidenceBundle(
         target=target,
         gene_id=hpa_res.get("ensembl_id", "ENSG_UNKNOWN"),
         indication=indication,
         isotope_context=isotope,  # type: ignore
+        vector_class=vector_class,  # type: ignore
         expression=hpa_res.get("claims", {}),
         oar_panel=oar_res.get("claims", {}),
         single_cell=sc_res.get("claims", {}),

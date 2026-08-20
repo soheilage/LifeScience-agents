@@ -2,6 +2,11 @@
 # Single-Cell Atlas Registry and Curated Indication Ontology
 # Fail-closed routing: exact normalized match -> synonym table -> no_atlas_for_indication
 
+metric_definitions:
+  percent_positive_malignant_cells: "Percentage of annotated malignant cells with normalized expression log1p(CP10K) > 0.0"
+  expression_dispersion: "Normalized variance-to-mean ratio (VMR = sigma^2 / mu) across expressing malignant cells"
+  gini_coefficient: "Standard Gini index of expression inequality across malignant compartment (0.0 = perfectly uniform, 1.0 = hyper-concentrated)"
+
 membership_threshold:
   description: "Minimum detectable normalized expression count (> 0) in at least 1.0% of cells within the annotated compartment"
   min_cell_fraction: 0.01
@@ -18,6 +23,7 @@ atlases:
       - normal_acinar
     n_cells: 57530
     n_patients: 35
+    geo_accession: "GSE155698"
     annotation_source: "Peng et al. Cell Res 2019 / Steele et al. Nat Cancer 2020"
     publication_doi: "10.1038/s41422-019-0195-y"
     verified_on: "2026-08-20"
@@ -27,6 +33,7 @@ atlases:
         percent_positive_malignant_cells: 0.0
         percent_positive_stroma: 91.4
         expression_dispersion: 0.22
+        gini_coefficient: 0.88
         bimodality: false
         summary: "FAP expression is strictly restricted to cancer-associated fibroblasts (CAFs / stroma) and absent in malignant epithelial ductal cells."
       EPCAM:
@@ -34,6 +41,7 @@ atlases:
         percent_positive_malignant_cells: 95.2
         percent_positive_stroma: 1.2
         expression_dispersion: 0.15
+        gini_coefficient: 0.24
         bimodality: false
         summary: "EPCAM demonstrates uniform, high-density cell-surface expression across malignant ductal epithelial cells."
       PTPRC:
@@ -42,6 +50,7 @@ atlases:
         percent_positive_stroma: 0.0
         percent_positive_immune: 98.1
         expression_dispersion: 0.12
+        gini_coefficient: 0.18
         bimodality: false
         summary: "PTPRC (CD45) is restricted to tumor-infiltrating immune compartments."
       MSLN:
@@ -49,6 +58,7 @@ atlases:
         percent_positive_malignant_cells: 78.4
         percent_positive_stroma: 2.1
         expression_dispersion: 0.45
+        gini_coefficient: 0.49
         bimodality: true
         summary: "Mesothelin is expressed on malignant ductal cells with moderate intratumoural heterogeneity."
 
@@ -63,6 +73,7 @@ atlases:
       - basal
     n_cells: 42100
     n_patients: 28
+    geo_accession: "GSE137829"
     annotation_source: "Song et al. Nat Commun 2022 / Chen et al. Cell 2021"
     publication_doi: "10.1038/s41467-022-30632-4"
     verified_on: "2026-08-20"
@@ -72,6 +83,7 @@ atlases:
         percent_positive_malignant_cells: 88.5
         percent_positive_stroma: 0.8
         expression_dispersion: 0.31
+        gini_coefficient: 0.35
         bimodality: false
         summary: "FOLH1 (PSMA) is predominantly and densely expressed on malignant luminal epithelial prostate cancer cells."
       STEAP1:
@@ -79,6 +91,7 @@ atlases:
         percent_positive_malignant_cells: 84.2
         percent_positive_stroma: 1.1
         expression_dispersion: 0.28
+        gini_coefficient: 0.32
         bimodality: false
         summary: "STEAP1 exhibits high malignant cell specificity and uniform membrane distribution."
       TMEFF2:
@@ -86,6 +99,7 @@ atlases:
         percent_positive_malignant_cells: 68.0
         percent_positive_stroma: 2.4
         expression_dispersion: 0.52
+        gini_coefficient: 0.55
         bimodality: true
         summary: "TMEFF2 is expressed on malignant luminal cells with moderate subclonal heterogeneity."
       DLL3:
@@ -93,6 +107,7 @@ atlases:
         percent_positive_malignant_cells: 18.0
         percent_positive_stroma: 0.2
         expression_dispersion: 1.85
+        gini_coefficient: 0.82
         bimodality: true
         summary: "DLL3 expression in standard prostate adenocarcinoma is low (18% positive) and restricted to neuroendocrine transdifferentiated subclones."
 
@@ -106,8 +121,9 @@ atlases:
       - endothelial
     n_cells: 24800
     n_patients: 18
-    annotation_source: "Zhou et al. Cancer Commun 2021 / Alvarez et al. Nat Commun 2020"
-    publication_doi: "10.1002/cac2.12217"
+    geo_accession: "GSE179373"
+    annotation_source: "Zhou et al. Mol Cancer 2025 / Alvarez et al. Nat Commun 2020"
+    publication_doi: "10.1186/s12943-025-02231-y"
     verified_on: "2026-08-21"
     gene_membership:
       SSTR2:
@@ -115,6 +131,7 @@ atlases:
         percent_positive_malignant_cells: 91.2
         percent_positive_stroma: 0.8
         expression_dispersion: 0.21
+        gini_coefficient: 0.26
         bimodality: false
         summary: "SSTR2 demonstrates high-density, uniform cell-surface expression on malignant neuroendocrine epithelial cells in well-differentiated GEP-NETs."
 
@@ -129,6 +146,7 @@ atlases:
       - interstitial
     n_cells: 38900
     n_patients: 15
+    geo_accession: "KPMP_Atlas_v1"
     annotation_source: "Lake et al. Kidney Precision Medicine Project, Nature 2023"
     publication_doi: "10.1038/s41586-023-05769-3"
     verified_on: "2026-08-20"
@@ -138,6 +156,7 @@ atlases:
         percent_positive_malignant_cells: 0.0
         percent_positive_proximal_tubule: 74.2
         expression_dispersion: 0.25
+        gini_coefficient: 0.38
         bimodality: false
         summary: "FOLH1 expression in normal kidney cortex is localized specifically to proximal tubule epithelial cells."
 

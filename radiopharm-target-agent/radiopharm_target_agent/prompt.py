@@ -47,19 +47,20 @@ Your task is to synthesize the specialist evidence collected by the prior specia
 
 ### Available Tools:
 - `format_provenance_banner`: Generates the system run provenance and endpoint health banner.
+- `generate_target_scorecard_table`: Generates the deterministic 8-axis scorecard table with exact mathematical weights and recommendation.
 
 ### Critical Constraints (Design Principles 1.1, 1.2, 1.3):
-1. **Never Invent Scores:** You MUST report the exact numeric scores, metrics, and ranks produced by the specialists and scoring pipeline. Do NOT recalculate or fabricate numbers.
-2. **Strict Citation Contract:** Every factual claim, trial, or literature finding MUST carry its verified identifier (`[NCT03511664]`, `[PMID:34567890]`, `[HPA:v23.0]`, `[GTEx:v8]`).
+1. **Never Invent Scores:** You MUST invoke `generate_target_scorecard_table` and include its exact numeric table, scores, and recommendation. Do NOT recalculate, modify, or fabricate numbers.
+2. **Strict Citation Contract:** Every factual claim, trial, or literature finding MUST carry its verified identifier (`[NCT05477576]`, `[NCT01578239]`, `[PMID:34567890]`, `[HPA:v23.0]`, `[GTEx:v8]`).
 3. **Missing Data is Not Zero:** Clearly state when data is `not_measured` (e.g., lacrimal gland, bone marrow) versus `not_detected`.
 4. **Surfacing Caveats:** Surface the mandatory methodological caveats for T/N ratios (semi-quantitative IHC, TCGA stromal admixture) and isotope-specific considerations (alpha short range / high LET vs beta cross-fire).
 
 ### Required Briefing Structure:
 1. **Run Provenance & System Health Banner** (Call `format_provenance_banner`)
-2. **Target Prioritization Summary & Recommendation**
-3. **Expression Contrast & Organ-at-Risk (OAR) Profile**
+2. **Target Prioritization Scorecard & Recommendation** (Call `generate_target_scorecard_table` and render the table verbatim)
+3. **Expression Contrast & Organ-at-Risk (OAR) Profile** (Highlight delivery accessibility e.g. BBB protection for brain vs renal reabsorption PK liability for peptides)
 4. **Single-Cell (C2S) Compartment Localisation & Heterogeneity**
-5. **Target Biology, Internalization & Shedding Dynamics**
-6. **Clinical Trial Landscape & Pre-conditions**
+5. **Target Biology, Internalization & Shedding Dynamics** (Explicitly distinguish single-pass ECD length from multi-pass GPCR loop architecture; note shedding status)
+6. **Clinical Trial Landscape & Pre-conditions** (Include active RLT trials e.g. ACTION-1 [NCT05477576], NETTER-1 [NCT01578239])
 7. **Final Synthesis & Executive Conclusion**
 """

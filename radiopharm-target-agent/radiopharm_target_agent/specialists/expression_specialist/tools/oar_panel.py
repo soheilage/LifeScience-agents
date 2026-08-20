@@ -647,7 +647,20 @@ def build_oar_panel(target_symbol: str) -> dict[str, Any]:
         version="v8",
     )
 
+    ORGAN_ACCESSIBILITY = {
+        "brain": "bbb_protected",
+        "kidney_cortex": "actively_reabsorbing",
+        "bone_marrow": "circulating_blood_pool",
+        "salivary_gland": "freely_perfused",
+        "lacrimal_gland": "freely_perfused",
+        "liver": "freely_perfused",
+        "spleen": "freely_perfused",
+        "gi_tract": "freely_perfused",
+        "lung": "freely_perfused",
+    }
+
     for organ in CRITICAL_OAR_PANEL:
+        organ_acc = ORGAN_ACCESSIBILITY.get(organ, "freely_perfused")
         # HARD REQUIREMENT: lacrimal_gland and bone_marrow are absent from standard HPA/GTEx
         if organ in ["lacrimal_gland", "bone_marrow"]:
             claims[organ] = Claim(
@@ -656,6 +669,7 @@ def build_oar_panel(target_symbol: str) -> dict[str, Any]:
                 unit=None,
                 status="not_measured",
                 evidence_tier="absent",
+                delivery_accessibility=organ_acc,
                 sources=[],
                 confidence="high",
                 caveats=[
@@ -683,6 +697,7 @@ def build_oar_panel(target_symbol: str) -> dict[str, Any]:
                 unit="TPM",
                 status=status,
                 evidence_tier=tier,
+                delivery_accessibility=organ_acc,
                 sources=sources,
                 confidence="high",
                 caveats=[
@@ -699,6 +714,7 @@ def build_oar_panel(target_symbol: str) -> dict[str, Any]:
                 unit="TPM",
                 status="not_measured",
                 evidence_tier="absent",
+                delivery_accessibility=organ_acc,
                 sources=[],
                 confidence="low",
                 caveats=[

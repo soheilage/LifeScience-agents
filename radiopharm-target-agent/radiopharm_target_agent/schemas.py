@@ -52,7 +52,7 @@ class Claim(BaseModel):
     A single typed, sourced scientific observation or measurement.
 
     Design Principle 1.2: A measured claim without a source cannot be constructed.
-    Design Principle 1.4: Missing data is not zero ('not_detected' vs 'not_measured' vs 'no_atlas_for_indication').
+    Design Principle 1.4: Missing data is not zero ('not_detected' vs 'not_measured' vs 'no_atlas_for_indication' vs 'not_reported').
     """
 
     field: str
@@ -63,6 +63,7 @@ class Claim(BaseModel):
         "not_detected",
         "not_measured",
         "no_atlas_for_indication",
+        "not_reported",
         "unavailable",
     ]
     evidence_tier: Literal[
@@ -73,6 +74,14 @@ class Claim(BaseModel):
         "literature",
         "absent",
     ]
+    delivery_accessibility: Literal[
+        "bbb_protected",
+        "freely_perfused",
+        "actively_reabsorbing",
+        "excretory_route",
+        "circulating_blood_pool",
+        "unspecified",
+    ] = "unspecified"
     sources: list[SourceRef] = Field(default_factory=list)
     confidence: Literal["high", "medium", "low"] = "high"
     caveats: list[str] = Field(default_factory=list)
@@ -138,8 +147,10 @@ class SingleCellRoutingMetadata(BaseModel):
     resolution_method: Literal["exact", "synonym", "unmapped"]
     n_cells: int | None = None
     n_patients: int | None = None
+    geo_accession: str | None = None
     annotation_source: str | None = None
     publication_doi: str | None = None
+    atlas_sha256: str | None = None
     verified_on: str | None = None
     membership_threshold: str | None = None
 
@@ -171,6 +182,7 @@ class EvidenceBundle(BaseModel):
     isotope_context: Literal[
         "Lu-177", "Ac-225", "Ga-68", "I-131", "Y-90", "Tb-161", "Pb-212"
     ]
+    vector_class: Literal["peptide", "small_molecule", "antibody", "nanobody", "unspecified"] = "peptide"
     expression: dict[str, Claim] = Field(default_factory=dict)
     oar_panel: dict[str, Claim] = Field(default_factory=dict)
     single_cell: dict[str, Claim] = Field(default_factory=dict)
@@ -206,6 +218,7 @@ class Scorecard(BaseModel):
     isotope_context: Literal[
         "Lu-177", "Ac-225", "Ga-68", "I-131", "Y-90", "Tb-161", "Pb-212"
     ]
+    vector_class: Literal["peptide", "small_molecule", "antibody", "nanobody", "unspecified"] = "peptide"
     total_score: float | None = None  # 0.0 to 10.0, or None if withheld
     rank: int | None = None
     axes: dict[str, ScoreAxisResult] = Field(default_factory=dict)

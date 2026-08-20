@@ -28,6 +28,7 @@ from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
 from . import prompt
 from .guards import resolve_gene_symbol
 from .provenance import format_provenance_banner, get_current_provenance
+from .scorer import generate_target_scorecard_table
 from .specialists.clinical_specialist.agent import clinical_specialist
 from .specialists.expression_specialist.agent import expression_specialist
 from .specialists.literature_specialist.agent import literature_specialist
@@ -63,7 +64,7 @@ writer = LlmAgent(
     model=MODEL,
     description="Synthesizes deterministic scores and multi-modal specialist evidence into a structured briefing.",
     instruction=prompt.WRITER_PROMPT,
-    tools=[format_provenance_banner],
+    tools=[format_provenance_banner, generate_target_scorecard_table],
 )
 
 # Root Sequential Coordinator Pipeline

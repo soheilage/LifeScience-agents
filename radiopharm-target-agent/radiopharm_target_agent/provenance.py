@@ -13,35 +13,36 @@
 # limitations under the License.
 
 """
-Provenance, data version stamping, and endpoint health checking.
+Provenance, environment verification, and run audit tools.
 
-Implements Gate G4: 100% of claims are version-stamped.
-Remediation Action 3: Surfaces single-cell atlas routing decisions and audit trail.
+Enforces Section 1.1: Every run stamps:
+- Primary reasoning model ID
+- Reference dataset version numbers (GTEx v8, HPA v23.0, C2S curated)
+- Active endpoint IDs for specialized models
+- Single-cell atlas routing decision, SHA-256 checksum, and membership threshold
+- ISO 8601 UTC timestamp
 """
 
 from datetime import datetime, timezone
 import os
 from typing import Any
-from dotenv import load_dotenv
-
-from .schemas import RunProvenance, SingleCellRoutingMetadata
-
-load_dotenv()
+from radiopharm_target_agent.schemas import RunProvenance, SingleCellRoutingMetadata
 
 
 def check_endpoint_health() -> dict[str, str]:
     """
-    Performs fast, non-blocking health checks against configured endpoints.
-    Returns status strings: 'active', 'configured', 'unavailable', or 'degraded'.
+    Checks the status and accessibility of external resources and Vertex AI endpoints.
+    Returns a dictionary of component health statuses.
     """
-    health: dict[str, str] = {}
+    health = {}
 
     # 1. NCBI E-utilities
     ncbi_key = os.getenv("NCBI_API_KEY")
-    if ncbi_key:
-        health["ncbi_eutilities"] = "active (authenticated, 10 req/s)"
-    else:
-        health["ncbi_eutilities"] = "active (unauthenticated, 3 req/s)"
+    health["ncbi_eutilities"] = (
+        "active (authenticated, 10 req/s)"
+        if ncbi_key
+        else "active (unauthenticated, 3 req/s)"
+    )
 
     # 2. GTEx & HPA APIs
     health["gtex_api"] = f"configured ({os.getenv('GTEX_RELEASE', 'v8')})"
@@ -154,11 +155,13 @@ def format_provenance_banner(
             lines.append(
                 f"  - **Selected Atlas:** `{r.selected_atlas_id}` (Resolution: `{r.resolution_method}`, Normalized Key: `{r.normalized_indication_key}`)"
             )
+            geo_str = f" | Accession: `{r.geo_accession}`" if r.geo_accession else ""
             lines.append(
-                f"  - **Atlas Specs:** {r.n_cells} cells across {r.n_patients} patients | Source: {r.annotation_source} (DOI: `{r.publication_doi}`)"
+                f"  - **Atlas Specs:** {r.n_cells} cells across {r.n_patients} patients{geo_str} | Source: {r.annotation_source} (DOI: `{r.publication_doi}`)"
             )
+            sha_str = f" | SHA256: `{r.atlas_sha256[:12]}...`" if r.atlas_sha256 else ""
             lines.append(
-                f"  - **Membership Threshold:** `{r.membership_threshold}` (Verified on `{r.verified_on}`)"
+                f"  - **Membership Threshold:** `{r.membership_threshold}` (Verified on `{r.verified_on}`{sha_str})"
             )
         else:
             lines.append(

@@ -20,9 +20,11 @@ Design Principles & Remediation:
 - Action 2: Split status vocabulary ('not_detected' vs 'no_atlas_for_indication').
 - Action 3: Surface full routing decision in output and provenance.
 - Action 6: Documented and logged membership threshold.
+- Action B2: Emit cryptographic SHA256 checksum and formal metric definitions (Gini vs Dispersion).
 """
 
 from datetime import datetime, timezone
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -39,6 +41,13 @@ from radiopharm_target_agent.schemas import (
 REFERENCE_DATE = datetime(2026, 8, 20, 0, 0, 0, tzinfo=timezone.utc)
 
 REGISTRY_PATH = Path(__file__).parent.parent / "atlas_registry.yaml"
+
+
+def get_atlas_registry_checksum() -> str:
+    """Computes SHA-256 checksum of the atlas registry file."""
+    if not REGISTRY_PATH.exists():
+        return "UNKNOWN_CHECKSUM"
+    return hashlib.sha256(REGISTRY_PATH.read_bytes()).hexdigest()
 
 
 def load_atlas_registry() -> dict[str, Any]:
@@ -84,6 +93,7 @@ def route_indication_to_atlas(
     thresh_desc = threshold_info.get(
         "description", "min count > 0 in >= 1.0% compartment cells"
     )
+    registry_sha = get_atlas_registry_checksum()
 
     norm_str = normalize_indication_string(raw_indication)
     norm_key = norm_str.replace(" ", "_")
@@ -118,6 +128,7 @@ def route_indication_to_atlas(
             raw_indication=raw_indication,
             normalized_indication_key=norm_key,
             resolution_method="unmapped",
+            atlas_sha256=registry_sha,
             membership_threshold=thresh_desc,
         )
         return None, meta
@@ -130,8 +141,10 @@ def route_indication_to_atlas(
         resolution_method=resolution_method,  # type: ignore
         n_cells=atlas_data.get("n_cells"),
         n_patients=atlas_data.get("n_patients"),
+        geo_accession=atlas_data.get("geo_accession"),
         annotation_source=atlas_data.get("annotation_source"),
         publication_doi=atlas_data.get("publication_doi"),
+        atlas_sha256=registry_sha,
         verified_on=str(atlas_data.get("verified_on")),
         membership_threshold=thresh_desc,
     )
@@ -189,6 +202,7 @@ def analyze_single_cell_target(
             "dominant_compartment": None,
             "percent_positive_malignant_cells": None,
             "dispersion": None,
+            "gini_coefficient": None,
             "bimodality": None,
             "summary": f"Single-cell evidence unavailable — no atlas registered for indication '{indication_str}'.",
             "claims": {"single_cell_specificity": claim_unmapped},
@@ -229,6 +243,7 @@ def analyze_single_cell_target(
             "dominant_compartment": None,
             "percent_positive_malignant_cells": 0.0,
             "dispersion": 0.0,
+            "gini_coefficient": 0.0,
             "bimodality": False,
             "summary": f"Gene '{canonical}' was queried in atlas '{atlas_id}' and not detected above threshold.",
             "claims": {"single_cell_specificity": claim_absent},
@@ -239,6 +254,7 @@ def analyze_single_cell_target(
     dominant_comp = gene_data["dominant_compartment"]
     pct_pos_mal = gene_data.get("percent_positive_malignant_cells", 0.0)
     disp = gene_data.get("expression_dispersion", 0.0)
+    gini = gene_data.get("gini_coefficient", 0.0)
     bimodal = gene_data.get("bimodality", False)
 
     claims = {
@@ -263,7 +279,16 @@ def analyze_single_cell_target(
         "sc_expression_dispersion": Claim(
             field="sc_expression_dispersion",
             value=disp,
-            unit="gini_dispersion",
+            unit="variance_to_mean_ratio",
+            status="measured",
+            evidence_tier="sc_rank",
+            sources=[source_ref],
+            confidence="high",
+        ),
+        "sc_gini_coefficient": Claim(
+            field="sc_gini_coefficient",
+            value=gini,
+            unit="gini_index_0_to_1",
             status="measured",
             evidence_tier="sc_rank",
             sources=[source_ref],
@@ -296,6 +321,7 @@ def analyze_single_cell_target(
         "dominant_compartment": dominant_comp,
         "percent_positive_malignant_cells": pct_pos_mal,
         "dispersion": disp,
+        "gini_coefficient": gini,
         "bimodality": bimodal,
         "summary": gene_data["summary"],
         "claims": claims,
