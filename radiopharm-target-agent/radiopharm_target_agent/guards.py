@@ -99,18 +99,18 @@ CANONICAL_GENE_REGISTRY = {
         "name": "glyceraldehyde-3-phosphate dehydrogenase",
         "uniprot_id": "P04406",
         "aliases": ["G3PD", "GAPD"],
-        "disambiguation_note": "Ubiquitously expressed housekeeping enzyme. Negative control for tumour selectivity.",
+        "disambiguation_note": "Ubiquitous metabolic enzyme. Used as selectivity negative control.",
         "membrane_accessible": False,
-        "topology": "Cytosolic / Nuclear enzyme",
+        "topology": "Cytosolic enzyme",
     },
     "MKI67": {
         "symbol": "MKI67",
         "name": "marker of proliferation Ki-67",
         "uniprot_id": "P46013",
-        "aliases": ["KI-67", "KIA"],
-        "disambiguation_note": "Intracellular nuclear proliferation marker. Negative control for cell-surface accessibility.",
+        "aliases": ["KI67", "KIA"],
+        "disambiguation_note": "Intracellular nuclear antigen. Inaccessible to intact radioligands.",
         "membrane_accessible": False,
-        "topology": "Nuclear matrix protein",
+        "topology": "Nuclear protein",
     },
     "TP53": {
         "symbol": "TP53",
@@ -175,155 +175,188 @@ CANONICAL_GENE_REGISTRY = {
         "membrane_accessible": True,
         "topology": "Single-pass type I membrane protein",
     },
+    "GPC3": {
+        "symbol": "GPC3",
+        "name": "glypican 3",
+        "uniprot_id": "P51654",
+        "aliases": ["DGSX", "SDYS"],
+        "disambiguation_note": "Oncofetal cell-surface heparan sulfate proteoglycan.",
+        "membrane_accessible": True,
+        "topology": "GPI-anchor membrane protein",
+    },
+    "FGFR2": {
+        "symbol": "FGFR2",
+        "name": "fibroblast growth factor receptor 2",
+        "uniprot_id": "P21802",
+        "aliases": ["CD332", "BEK"],
+        "disambiguation_note": "Receptor tyrosine kinase.",
+        "membrane_accessible": True,
+        "topology": "Single-pass type I membrane protein",
+    },
+    "CLDN18": {
+        "symbol": "CLDN18",
+        "name": "claudin 18",
+        "uniprot_id": "P56856",
+        "aliases": ["CLDN18.2"],
+        "disambiguation_note": "Tight junction 4-transmembrane protein.",
+        "membrane_accessible": True,
+        "topology": "Multi-pass (4TM) membrane protein",
+    },
 }
 
 # Known non-existent / invalid symbols that must trigger abstention
-KNOWN_INVALID_SYMBOLS = {"FOLH9", "PSMA9", "SSTR99", "INVALID_GENE"}
+INVALID_TARGET_SYMBOLS = {
+    "FOLH9": "Abstaining: FOLH9 is not a recognised human gene or pseudogene symbol in HGNC or Ensembl.",
+    "PSMA99": "Abstaining: PSMA99 is a fabricated identifier not present in HGNC.",
+    "NONEXISTENT1": "Abstaining: Target does not exist.",
+}
 
 
 def validate_nct_id(nct_id: str) -> bool:
-    """Checks if an NCT identifier matches the canonical regex format."""
-    if not nct_id or not isinstance(nct_id, str):
+    """
+    Validates NCT clinical trial identifier syntax (NCT followed by exactly 8 digits).
+    Returns True if valid, False otherwise.
+    """
+    if not isinstance(nct_id, str):
         return False
     return bool(NCT_REGEX.match(nct_id.strip()))
 
 
-def validate_pmid(pmid: str) -> bool:
-    """Checks if a PubMed identifier matches the canonical numeric format."""
-    if not pmid or not isinstance(pmid, str):
-        return False
-    return bool(PMID_REGEX.match(pmid.strip()))
-
-
-def resolve_gene_symbol(query: str) -> dict[str, Any]:
+def validate_pmid(pmid: str | int) -> bool:
     """
-    Resolves gene aliases to canonical HGNC symbols with explicit disambiguation.
-    Enforces abstention on unrecognised gene symbols (Gate G2).
+    Validates PubMed ID format (1 to 9 digits, positive integer).
+    Returns True if valid, False otherwise.
     """
-    cleaned = query.strip().upper()
+    pmid_str = str(pmid).strip()
+    return bool(PMID_REGEX.match(pmid_str))
 
-    if cleaned in KNOWN_INVALID_SYMBOLS:
+
+def resolve_gene_symbol(target_input: str) -> dict[str, Any]:
+    """
+    Resolves gene alias to canonical HGNC symbol with explicit disambiguation.
+    Triggers immediate abstention for unrecognised symbols (e.g. FOLH9).
+
+    Design Principle 1.4: Strict symbol validation before calling external APIs.
+    """
+    cleaned = target_input.strip().upper()
+
+    # 1. Check known invalid / non-existent symbols
+    if cleaned in INVALID_TARGET_SYMBOLS:
         return {
             "status": "abstain",
-            "symbol": cleaned,
+            "target_input": target_input,
             "canonical_symbol": None,
-            "reason": f"'{cleaned}' is not an approved HGNC gene symbol or recognised target. Abstaining to prevent confabulation.",
+            "reason": INVALID_TARGET_SYMBOLS[cleaned],
+            "disambiguation_note": None,
         }
 
-    # Direct match
+    # 2. Check canonical registry directly
     if cleaned in CANONICAL_GENE_REGISTRY:
-        info = CANONICAL_GENE_REGISTRY[cleaned]
+        meta = CANONICAL_GENE_REGISTRY[cleaned]
         return {
             "status": "resolved",
-            "symbol": cleaned,
-            "canonical_symbol": info["symbol"],
-            "name": info["name"],
-            "uniprot_id": info["uniprot_id"],
-            "disambiguation_note": info["disambiguation_note"],
-            "membrane_accessible": info["membrane_accessible"],
-            "topology": info["topology"],
+            "target_input": target_input,
+            "canonical_symbol": meta["symbol"],
+            "uniprot_id": meta["uniprot_id"],
+            "name": meta["name"],
+            "topology": meta["topology"],
+            "disambiguation_note": meta["disambiguation_note"],
         }
 
-    # Search through aliases
-    for sym, info in CANONICAL_GENE_REGISTRY.items():
-        if cleaned in [a.upper() for a in info["aliases"]]:
+    # 3. Check alias mapping
+    for canonical, meta in CANONICAL_GENE_REGISTRY.items():
+        if cleaned in [a.upper() for a in meta["aliases"]]:
             return {
                 "status": "resolved",
-                "symbol": cleaned,
-                "canonical_symbol": info["symbol"],
-                "name": info["name"],
-                "uniprot_id": info["uniprot_id"],
-                "disambiguation_note": info["disambiguation_note"],
-                "membrane_accessible": info["membrane_accessible"],
-                "topology": info["topology"],
+                "target_input": target_input,
+                "canonical_symbol": canonical,
+                "uniprot_id": meta["uniprot_id"],
+                "name": meta["name"],
+                "topology": meta["topology"],
+                "disambiguation_note": meta["disambiguation_note"],
             }
 
-    # Unknown gene: abstain
+    # 4. Unknown target fallback (Fail Closed Abstention)
     return {
         "status": "abstain",
-        "symbol": cleaned,
+        "target_input": target_input,
         "canonical_symbol": None,
-        "reason": f"Gene symbol '{cleaned}' could not be resolved to a verified HGNC entry. Abstaining to prevent confabulation.",
+        "reason": f"Abstaining: Target '{target_input}' could not be resolved to a known validated HGNC gene symbol.",
+        "disambiguation_note": None,
     }
 
 
 def check_membrane_gate(
-    topology: str | None,
+    topology: str | None = None,
+    locations: list[str] | None = None,
     subcellular_locations: list[str] | None = None,
     gene_symbol: str | None = None,
+    **kwargs: Any,
 ) -> tuple[bool, str]:
     """
-    Evaluates whether a target passes the cell-surface accessibility hard gate.
-    Intracellular targets (nuclear, cytoplasmic) cannot bind intact radioligands.
+    Enforces Phase 4 & Gate G2 Cell-Surface Membrane Accessibility Gate.
+    Terminates / fails targets localized intracellularly (nuclear, cytosolic).
     """
-    if gene_symbol:
-        res = resolve_gene_symbol(gene_symbol)
-        if res.get("status") == "resolved" and not res.get(
-            "membrane_accessible"
-        ):
-            return False, (
-                f"Target {gene_symbol} failed cell-surface membrane gate: "
-                f"Annotated as intracellular ({res.get('topology', 'intracellular')}). "
-                "Intact radiopharmaceuticals cannot access intracellular targets."
+    locs = locations or subcellular_locations or []
+    text = f"{topology or ''} {' '.join(locs)} {gene_symbol or ''}".lower()
+
+    if gene_symbol and gene_symbol in CANONICAL_GENE_REGISTRY:
+        is_acc = CANONICAL_GENE_REGISTRY[gene_symbol]["membrane_accessible"]
+        top = CANONICAL_GENE_REGISTRY[gene_symbol]["topology"]
+        if is_acc:
+            return True, "Target passed cell-surface accessibility gate."
+        else:
+            return (
+                False,
+                f"Target '{gene_symbol}' failed cell-surface membrane gate: intracellular ({top}).",
             )
 
-    combined_text = f"{topology or ''} {' '.join(subcellular_locations or [])}".lower()
-
-    # Positive surface markers
-    surface_keywords = [
-        "transmembrane",
-        "cell membrane",
-        "plasma membrane",
-        "single-pass",
-        "multi-pass",
-        "gpi-anchor",
-        "extracellular",
-        "cell surface",
-    ]
-    # Hard negative markers
-    intracellular_keywords = [
-        "nuclear",
-        "nucleus",
-        "nucleolus",
-        "cytoplasm",
-        "cytosol",
-        "mitochondrial",
-        "ribosomal",
-    ]
-
-    has_surface = any(kw in combined_text for kw in surface_keywords)
-    is_pure_intracellular = any(
-        kw in combined_text for kw in intracellular_keywords
-    ) and not has_surface
-
-    if is_pure_intracellular or (topology and not has_surface):
-        return False, (
-            f"Target failed cell-surface membrane gate: Subcellular localization is intracellular "
-            f"({topology or 'no transmembrane domain'}). Radioligand therapy requires extracellular accessibility."
+    if any(k in text for k in ["nuclear", "nucleus", "cytosol", "cytoplasmic", "mitochondr"]) and not any(
+        k in text for k in ["single-pass", "multi-pass", "membrane", "transmembrane", "plasma membrane", "cell membrane", "cell surface", "gpi"]
+    ):
+        return (
+            False,
+            f"Target '{gene_symbol or 'unknown'}' failed cell-surface membrane gate: intracellular localization ({topology}).",
         )
 
-    return True, "Target passed cell-surface accessibility gate."
+    if any(
+        k in text
+        for k in [
+            "single-pass",
+            "multi-pass",
+            "membrane",
+            "transmembrane",
+            "plasma membrane",
+            "cell membrane",
+            "cell surface",
+            "gpi",
+            "7tm",
+        ]
+    ):
+        return True, "Target passed cell-surface accessibility gate."
+
+    return (
+        False,
+        f"Target '{gene_symbol or 'unknown'}' failed cell-surface membrane gate: topology '{topology}' is not cell-surface accessible.",
+    )
 
 
-def enforce_citation_or_abstain(
-    claims: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+check_membrane_accessibility = check_membrane_gate
+
+
+def enforce_citation_or_abstain(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
-    Filters out any quantitative or measured claim that lacks a verifiable source.
+    Enforces that every claim marked 'measured' must have at least one valid SourceRef.
+    If no source exists, sets status='unavailable' and value=None (fails closed).
     """
-    valid_claims = []
+    sanitized = []
     for c in claims:
-        status = c.get("status")
-        sources = c.get("sources", [])
-        if status == "measured" and not sources:
-            # Drop or convert to unavailable with caveat
-            c_copy = dict(c)
-            c_copy["status"] = "unavailable"
-            c_copy["value"] = None
-            c_copy["caveats"] = c_copy.get("caveats", []) + [
-                "Claim withheld: measured claim lacked verified source attribution."
-            ]
-            valid_claims.append(c_copy)
-        else:
-            valid_claims.append(c)
-    return valid_claims
+        item = dict(c)
+        if item.get("status") == "measured" and not item.get("sources"):
+            item["status"] = "unavailable"
+            item["value"] = None
+        sanitized.append(item)
+    return sanitized
+
+
+enforce_citation_contract = enforce_citation_or_abstain

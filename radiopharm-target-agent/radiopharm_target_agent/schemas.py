@@ -52,13 +52,19 @@ class Claim(BaseModel):
     A single typed, sourced scientific observation or measurement.
 
     Design Principle 1.2: A measured claim without a source cannot be constructed.
-    Design Principle 1.4: Missing data is not zero ('not_detected' vs 'not_measured').
+    Design Principle 1.4: Missing data is not zero ('not_detected' vs 'not_measured' vs 'no_atlas_for_indication').
     """
 
     field: str
     value: Any = None  # float, str, bool, dict, list, or None
     unit: str | None = None
-    status: Literal["measured", "not_detected", "not_measured", "unavailable"]
+    status: Literal[
+        "measured",
+        "not_detected",
+        "not_measured",
+        "no_atlas_for_indication",
+        "unavailable",
+    ]
     evidence_tier: Literal[
         "protein_quant",
         "protein_ihc",
@@ -85,9 +91,9 @@ class TrialRecord(BaseModel):
     """Structured clinical trial record from ClinicalTrials.gov."""
 
     nct_id: str
-    title: str
-    phase: str
-    status: str
+    title: str = "Unspecified Clinical Trial"
+    phase: str = "Phase not specified"
+    status: str = "Unknown status"
     conditions: list[str] = Field(default_factory=list)
     interventions: list[str] = Field(default_factory=list)
     modalities: list[str] = Field(
@@ -109,26 +115,37 @@ class LiteratureFinding(BaseModel):
 
     pmid: str | None = None
     pmcid: str | None = None
-    title: str
-    abstract: str | None = None
-    findings: str | None = None
-    key_snippets: list[str] = Field(default_factory=list)
-    orr: str | float | None = None  # Overall Response Rate
-    pfs: str | float | None = None  # Progression Free Survival
-    os: str | float | None = None  # Overall Survival
-    mtd: str | None = None  # Maximum Tolerated Dose
-    absorbed_dose_gy_per_gbq: dict[str, float] | None = None
-    dosimetry_method: str | None = None
-    species: Literal[
-        "human", "mouse", "rat", "non_human_primate", "in_vitro", "unknown"
-    ] = "human"
+    title: str = "Unspecified Title"
+    abstract_excerpt: str = ""
+    species: Literal["human", "mouse", "rat", "non_human_primate", "in_vitro", "unspecified"] = "unspecified"
+    modality: str | None = None
+    dosimetry: dict[str, float] | None = None
+    efficacy_endpoints: dict[str, Any] | None = None
+    orr: str | None = None
+    pfs: str | None = None
+    os_endpoint: str | None = None
     is_radiopharmaceutical: bool = False
     isotope: str | None = None
     sources: list[SourceRef] = Field(default_factory=list)
 
 
+class SingleCellRoutingMetadata(BaseModel):
+    """Single-cell atlas routing decision and audit metadata."""
+
+    selected_atlas_id: str | None = None
+    raw_indication: str
+    normalized_indication_key: str
+    resolution_method: Literal["exact", "synonym", "unmapped"]
+    n_cells: int | None = None
+    n_patients: int | None = None
+    annotation_source: str | None = None
+    publication_doi: str | None = None
+    verified_on: str | None = None
+    membership_threshold: str | None = None
+
+
 class RunProvenance(BaseModel):
-    """Complete provenance and endpoint version metadata for a run."""
+    """Audit trail and reproducibility stamp for each pipeline run."""
 
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
@@ -142,6 +159,7 @@ class RunProvenance(BaseModel):
     medgemma_endpoint_id: str | None = None
     c2s_endpoint_id: str | None = None
     endpoint_health_status: dict[str, str] = Field(default_factory=dict)
+    single_cell_routing: SingleCellRoutingMetadata | None = None
 
 
 class EvidenceBundle(BaseModel):
@@ -156,6 +174,7 @@ class EvidenceBundle(BaseModel):
     expression: dict[str, Claim] = Field(default_factory=dict)
     oar_panel: dict[str, Claim] = Field(default_factory=dict)
     single_cell: dict[str, Claim] = Field(default_factory=dict)
+    single_cell_routing: SingleCellRoutingMetadata | None = None
     clinical: list[TrialRecord] = Field(default_factory=list)
     literature: list[LiteratureFinding] = Field(default_factory=list)
     target_biology: dict[str, Claim] = Field(default_factory=dict)

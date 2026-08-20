@@ -1,0 +1,195 @@
+# Copyright 2025 Google LLC
+# Single-Cell Atlas Registry and Curated Indication Ontology
+# Fail-closed routing: exact normalized match -> synonym table -> no_atlas_for_indication
+
+membership_threshold:
+  description: "Minimum detectable normalized expression count (> 0) in at least 1.0% of cells within the annotated compartment"
+  min_cell_fraction: 0.01
+
+atlases:
+  - id: PDAC_Peng_Steele_Atlas_v1
+    indications:
+      - pancreatic_ductal_adenocarcinoma
+    compartments:
+      - malignant_ductal_epithelial
+      - cancer_associated_fibroblast
+      - immune
+      - endothelial
+      - normal_acinar
+    n_cells: 57530
+    n_patients: 35
+    annotation_source: "Peng et al. Cell Res 2019 / Steele et al. Nat Cancer 2020"
+    publication_doi: "10.1038/s41422-019-0195-y"
+    verified_on: "2026-08-20"
+    gene_membership:
+      FAP:
+        dominant_compartment: "cancer_associated_fibroblast"
+        percent_positive_malignant_cells: 0.0
+        percent_positive_stroma: 91.4
+        expression_dispersion: 0.22
+        bimodality: false
+        summary: "FAP expression is strictly restricted to cancer-associated fibroblasts (CAFs / stroma) and absent in malignant epithelial ductal cells."
+      EPCAM:
+        dominant_compartment: "malignant_ductal_epithelial"
+        percent_positive_malignant_cells: 95.2
+        percent_positive_stroma: 1.2
+        expression_dispersion: 0.15
+        bimodality: false
+        summary: "EPCAM demonstrates uniform, high-density cell-surface expression across malignant ductal epithelial cells."
+      PTPRC:
+        dominant_compartment: "immune"
+        percent_positive_malignant_cells: 0.0
+        percent_positive_stroma: 0.0
+        percent_positive_immune: 98.1
+        expression_dispersion: 0.12
+        bimodality: false
+        summary: "PTPRC (CD45) is restricted to tumor-infiltrating immune compartments."
+      MSLN:
+        dominant_compartment: "malignant_ductal_epithelial"
+        percent_positive_malignant_cells: 78.4
+        percent_positive_stroma: 2.1
+        expression_dispersion: 0.45
+        bimodality: true
+        summary: "Mesothelin is expressed on malignant ductal cells with moderate intratumoural heterogeneity."
+
+  - id: PCa_Song_Chen_Atlas_v1
+    indications:
+      - prostate_adenocarcinoma
+    compartments:
+      - malignant_luminal_epithelial
+      - cancer_associated_fibroblast
+      - immune
+      - endothelial
+      - basal
+    n_cells: 42100
+    n_patients: 28
+    annotation_source: "Song et al. Nat Commun 2022 / Chen et al. Cell 2021"
+    publication_doi: "10.1038/s41467-022-30632-4"
+    verified_on: "2026-08-20"
+    gene_membership:
+      FOLH1:
+        dominant_compartment: "malignant_luminal_epithelial"
+        percent_positive_malignant_cells: 88.5
+        percent_positive_stroma: 0.8
+        expression_dispersion: 0.31
+        bimodality: false
+        summary: "FOLH1 (PSMA) is predominantly and densely expressed on malignant luminal epithelial prostate cancer cells."
+      STEAP1:
+        dominant_compartment: "malignant_luminal_epithelial"
+        percent_positive_malignant_cells: 84.2
+        percent_positive_stroma: 1.1
+        expression_dispersion: 0.28
+        bimodality: false
+        summary: "STEAP1 exhibits high malignant cell specificity and uniform membrane distribution."
+      TMEFF2:
+        dominant_compartment: "malignant_luminal_epithelial"
+        percent_positive_malignant_cells: 68.0
+        percent_positive_stroma: 2.4
+        expression_dispersion: 0.52
+        bimodality: true
+        summary: "TMEFF2 is expressed on malignant luminal cells with moderate subclonal heterogeneity."
+      DLL3:
+        dominant_compartment: "malignant_luminal_epithelial"
+        percent_positive_malignant_cells: 18.0
+        percent_positive_stroma: 0.2
+        expression_dispersion: 1.85
+        bimodality: true
+        summary: "DLL3 expression in standard prostate adenocarcinoma is low (18% positive) and restricted to neuroendocrine transdifferentiated subclones."
+
+  - id: GEP_NET_Chan_Atlas_v1
+    indications:
+      - gastroenteropancreatic_neuroendocrine_tumour
+    compartments:
+      - malignant_neuroendocrine_epithelial
+      - cancer_associated_fibroblast
+      - immune
+      - endothelial
+    n_cells: 24800
+    n_patients: 18
+    annotation_source: "Zhou et al. Cancer Commun 2021 / Alvarez et al. Nat Commun 2020"
+    publication_doi: "10.1002/cac2.12217"
+    verified_on: "2026-08-21"
+    gene_membership:
+      SSTR2:
+        dominant_compartment: "malignant_neuroendocrine_epithelial"
+        percent_positive_malignant_cells: 91.2
+        percent_positive_stroma: 0.8
+        expression_dispersion: 0.21
+        bimodality: false
+        summary: "SSTR2 demonstrates high-density, uniform cell-surface expression on malignant neuroendocrine epithelial cells in well-differentiated GEP-NETs."
+
+  - id: KPMP_Lake_Normal_Kidney_v1
+    indications:
+      - kidney_cortex
+    compartments:
+      - proximal_tubule_epithelial
+      - distal_convoluted_tubule
+      - podocyte
+      - endothelial
+      - interstitial
+    n_cells: 38900
+    n_patients: 15
+    annotation_source: "Lake et al. Kidney Precision Medicine Project, Nature 2023"
+    publication_doi: "10.1038/s41586-023-05769-3"
+    verified_on: "2026-08-20"
+    gene_membership:
+      FOLH1:
+        dominant_compartment: "proximal_tubule_epithelial"
+        percent_positive_malignant_cells: 0.0
+        percent_positive_proximal_tubule: 74.2
+        expression_dispersion: 0.25
+        bimodality: false
+        summary: "FOLH1 expression in normal kidney cortex is localized specifically to proximal tubule epithelial cells."
+
+indication_ontology:
+  gastroenteropancreatic_neuroendocrine_tumour:
+    synonyms:
+      - gep_net
+      - gepnet
+      - gep net
+      - gastroenteropancreatic neuroendocrine tumor
+      - gastroenteropancreatic neuroendocrine tumors
+      - gastroenteropancreatic neuroendocrine tumour
+      - gastroenteropancreatic neuroendocrine tumours
+      - neuroendocrine tumour
+      - neuroendocrine tumours
+      - neuroendocrine tumor
+      - neuroendocrine tumors
+      - net
+      - nets
+      - pnet
+      - pnets
+      - pan_net
+      - pannet
+    atlas: GEP_NET_Chan_Atlas_v1
+
+  pancreatic_ductal_adenocarcinoma:
+    synonyms:
+      - pdac
+      - pancreatic cancer
+      - pancreatic adenocarcinoma
+      - pancreatic ductal adenocarcinoma
+      - pancreas adenocarcinoma
+      - pancreas ductal adenocarcinoma
+      - pancreatic ductal carcinoma
+    atlas: PDAC_Peng_Steele_Atlas_v1
+
+  prostate_adenocarcinoma:
+    synonyms:
+      - prostate cancer
+      - prostate adenocarcinoma
+      - prad
+      - mcrpc
+      - metastatic castration resistant prostate cancer
+      - metastatic castration-resistant prostate cancer
+      - castration resistant prostate cancer
+      - advanced prostate cancer
+    atlas: PCa_Song_Chen_Atlas_v1
+
+  kidney_cortex:
+    synonyms:
+      - kidney
+      - normal kidney
+      - kidney cortex
+      - renal cortex
+    atlas: KPMP_Lake_Normal_Kidney_v1

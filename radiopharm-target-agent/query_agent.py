@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,20 +13,16 @@
 # limitations under the License.
 
 """
-query_agent.py — Command-line interface and execution engine for radiopharm-target-agent.
+Command-Line Interface (CLI) & Comparative Target Prioritisation Engine.
 
-Demonstrates local deterministic execution, multi-target comparative assessment,
-and Vertex AI Agent Engine deployment querying.
+Enables comparative target scoring against candidate panels (e.g. FOLH1 vs STEAP1 vs TMEFF2 vs DLL3)
+and outputs structured, auditable briefings in Markdown format.
 """
 
 import argparse
 import os
 import sys
 from datetime import datetime, timezone
-from dotenv import load_dotenv
-
-# Ensure local package path is available
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from radiopharm_target_agent.guards import resolve_gene_symbol
 from radiopharm_target_agent.provenance import (
@@ -35,17 +30,14 @@ from radiopharm_target_agent.provenance import (
     get_current_provenance,
 )
 from radiopharm_target_agent.schemas import (
-    Claim,
     EvidenceBundle,
     LiteratureFinding,
     Scorecard,
+    SingleCellRoutingMetadata,
     SourceRef,
     TrialRecord,
 )
 from radiopharm_target_agent.scorer import compute_target_scorecard
-from radiopharm_target_agent.specialists.clinical_specialist.tools.search_clinical_trials import (
-    search_trials,
-)
 from radiopharm_target_agent.specialists.expression_specialist.tools.cell2sentence_analyzer import (
     analyze_single_cell_target,
 )
@@ -55,9 +47,6 @@ from radiopharm_target_agent.specialists.expression_specialist.tools.hpa_gtex_ex
 from radiopharm_target_agent.specialists.expression_specialist.tools.oar_panel import (
     build_oar_panel,
 )
-from radiopharm_target_agent.specialists.literature_specialist.tools.fetch_articles import (
-    fetch_pubmed_articles,
-)
 from radiopharm_target_agent.specialists.target_biology_specialist.tools.ligand_tractability import (
     assess_ligand_tractability,
 )
@@ -65,15 +54,11 @@ from radiopharm_target_agent.specialists.target_biology_specialist.tools.txgemma
     evaluate_target_biology,
 )
 
-load_dotenv()
-
 
 def evaluate_single_target(
     target: str, indication: str, isotope: str
 ) -> tuple[EvidenceBundle, Scorecard]:
     """Runs the deterministic multi-specialist pipeline for a single target."""
-    prov = get_current_provenance()
-
     # 1. Resolve gene symbol & alias
     resolved = resolve_gene_symbol(target)
     canonical = resolved.get("canonical_symbol", target)
@@ -84,6 +69,14 @@ def evaluate_single_target(
     sc_res = analyze_single_cell_target(canonical, indication=indication)
     bio_res = evaluate_target_biology(canonical)
     tract_res = assess_ligand_tractability(canonical)
+
+    sc_routing_data = sc_res.get("routing")
+    sc_routing_obj = (
+        SingleCellRoutingMetadata(**sc_routing_data)
+        if sc_routing_data
+        else None
+    )
+    prov = get_current_provenance(sc_routing=sc_routing_obj)
 
     # 3. Clinical & Literature evidence records
     clinical_records = []
@@ -149,11 +142,8 @@ def evaluate_single_target(
         LiteratureFinding(
             pmid="34567890" if canonical == "FOLH1" else ("22080443" if canonical == "STEAP1" else "28076709"),
             title=f"Dosimetry and clinical therapeutic efficacy of {isotope}-{canonical}",
-            orr="45%" if canonical == "FOLH1" else ("28%" if canonical == "STEAP1" else "38%"),
-            pfs="8.7 months" if canonical == "FOLH1" else ("5.2 months" if canonical == "STEAP1" else "28.4 months"),
             species="human",
-            is_radiopharmaceutical=True,
-            isotope=isotope,
+            modality="therapy",
             sources=[
                 SourceRef(
                     kind="pubmed",
@@ -172,6 +162,7 @@ def evaluate_single_target(
         expression=hpa_res.get("claims", {}),
         oar_panel=oar_res.get("claims", {}),
         single_cell=sc_res.get("claims", {}),
+        single_cell_routing=sc_routing_obj,
         clinical=clinical_records,
         literature=lit_records,
         target_biology=bio_res.get("claims", {}),
@@ -189,14 +180,12 @@ def format_target_briefing(bundle: EvidenceBundle, scorecard: Scorecard) -> str:
         f"# Radiopharmaceutical Target Assessment: {scorecard.target}",
         f"**Canonical Gene:** `{scorecard.target}` (`{bundle.gene_id}`) | **Indication:** `{bundle.indication}` | **Isotope Context:** `{scorecard.isotope_context}`",
         f"**Final Recommendation:** `{scorecard.recommendation.upper()}` | **Total Score:** **{scorecard.total_score if scorecard.total_score is not None else 'WITHHELD'}/10.0**\n",
-    ]
-
-    # Scorecard Table
-    lines.extend([
-        "### Prioritization Scorecard Breakdown",
+        format_provenance_banner(scorecard.provenance),
+        "\n### Prioritization Scorecard Breakdown",
         "| Evaluation Axis | Score (/10) | Weight | Weighted | Status | Rationale |",
         "| :--- | :---: | :---: | :---: | :---: | :--- |",
-    ])
+    ]
+
     for ax_name, ax in scorecard.axes.items():
         score_str = f"{ax.score:.2f}" if ax.score is not None else "WITHHELD"
         w_score_str = f"{ax.weighted_score:.3f}" if ax.weighted_score is not None else "—"
@@ -219,12 +208,27 @@ def format_target_briefing(bundle: EvidenceBundle, scorecard: Scorecard) -> str:
         lines.append(f"- **{organ.replace('_', ' ').title()}:** {status_tag} — {val_str}")
 
     # Single-cell & Dynamics
+    sc_claim = bundle.single_cell.get("single_cell_specificity") or bundle.single_cell.get("sc_dominant_compartment")
+    sc_status = sc_claim.status if sc_claim else "not_measured"
     sc_comp = bundle.single_cell.get("sc_dominant_compartment", {}).value or "Uncharacterized"
-    pct_pos = bundle.single_cell.get("sc_percent_positive_malignant", {}).value or "N/A"
+    pct_pos = bundle.single_cell.get("sc_percent_positive_malignant", {}).value
+    pct_str = f"{pct_pos}%" if pct_pos is not None else "N/A"
+
     lines.extend([
         "\n### 3. Single-Cell Compartment Specificity & Heterogeneity (C2S)",
+        f"- **Single-Cell Status:** `{sc_status}`",
         f"- **Dominant Cell Compartment:** `{sc_comp}`",
-        f"- **Malignant Cell Positivity:** {pct_pos}%",
+        f"- **Malignant Cell Positivity:** {pct_str}",
+    ])
+
+    if bundle.single_cell_routing:
+        r = bundle.single_cell_routing
+        if r.selected_atlas_id:
+            lines.append(f"- **Active Atlas:** `{r.selected_atlas_id}` (DOI: `{r.publication_doi}`)")
+        else:
+            lines.append(f"- **Active Atlas:** `None` (Indication '{r.raw_indication}' unmapped in curated ontology)")
+
+    lines.extend([
         "\n### 4. Target Biology & Dynamics",
         f"- **Membrane Topology:** {bundle.target_biology.get('cell_surface_accessible', {}).value and 'Cell-Surface Transmembrane' or 'Intracellular'}",
         f"- **Internalization Kinetics:** `{bundle.target_biology.get('internalization_suitability', {}).value or 'N/A'}`",
@@ -255,7 +259,7 @@ def run_comparative_pipeline(
     summary_table = [
         f"## Comparative Target Prioritisation Briefing: {', '.join(targets)}",
         f"**Indication:** `{indication}` | **Isotope Context:** `{isotope}`\n",
-        format_provenance_banner(get_current_provenance()),
+        format_provenance_banner(get_current_provenance(sc_routing=results[0][0].single_cell_routing if results else None)),
         "\n### Executive Target Comparison & Rank Order",
         "| Rank | Target Gene | Total Score (/10) | Recommendation | Primary Strength | Critical Liabilities / Failure Reason |",
         "| :---: | :---: | :---: | :---: | :--- | :--- |",
@@ -274,59 +278,61 @@ def run_comparative_pipeline(
             else (
                 "Salivary/renal OAR monitoring"
                 if card.target == "FOLH1"
-                else "None limiting"
+                else "Phase 1 monitoring"
             )
         )
         strength = (
-            "High T/N (32.5x), FDA precedent"
-            if card.target == "FOLH1"
-            else (
-                "High selectivity (26.5x)"
-                if card.target == "STEAP1"
-                else (
-                    "Prostate-enriched"
-                    if card.target == "TMEFF2"
-                    else "SCLC/NEPC selective"
-                )
-            )
+            "Phase 3 clinical RLT validation & rapid internalization"
+            if card.target in ["FOLH1", "SSTR2"]
+            else "High prostate tumour contrast"
         )
         summary_table.append(
-            f"| **#{rank_idx}** | **{card.target}** | {score_display} | `{card.recommendation}` | {strength} | {liabilities} |"
+            f"| **#{rank_idx}** | `{card.target}` | {score_display} | `{card.recommendation.upper()}` | {strength} | {liabilities} |"
         )
         ranked_briefings.append(format_target_briefing(bundle, card))
 
-    full_output = (
-        "\n".join(summary_table) + "\n\n" + "\n".join(ranked_briefings)
-    )
-    return full_output
+    output_blocks = ["\n".join(summary_table), "\n\n".join(ranked_briefings)]
+    return "\n\n".join(output_blocks)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Radiopharmaceutical Target Prioritisation CLI"
+        description="Radiopharmaceutical Target Prioritisation CLI Engine"
     )
     parser.add_argument(
         "--targets",
         nargs="+",
-        default=["FOLH1", "STEAP1", "TMEFF2", "DLL3"],
-        help="List of candidate target gene symbols",
+        required=True,
+        help="List of target gene symbols (e.g. FOLH1 STEAP1 DLL3 SSTR2)",
     )
     parser.add_argument(
         "--indication",
+        type=str,
         default="metastatic castration-resistant prostate cancer",
-        help="Target disease indication",
+        help="Disease indication context",
     )
     parser.add_argument(
         "--isotope",
+        type=str,
         default="Lu-177",
         choices=["Lu-177", "Ac-225", "Ga-68", "I-131", "Y-90", "Tb-161", "Pb-212"],
-        help="Therapeutic or diagnostic radionuclide context",
+        help="Radionuclide payload context",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Optional path to save Markdown briefing",
+    )
 
-    print(f"🔬 Running radiopharm-target-agent for {args.targets} in {args.indication} ({args.isotope})...\n")
-    report = run_comparative_pipeline(args.targets, args.indication, args.isotope)
-    print(report)
+    args = parser.parse_args()
+    briefing = run_comparative_pipeline(args.targets, args.indication, args.isotope)
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(briefing)
+        print(f"Briefing successfully saved to: {args.output}")
+    else:
+        print(briefing)
 
 
 if __name__ == "__main__":

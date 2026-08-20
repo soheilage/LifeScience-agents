@@ -15,138 +15,139 @@
 """
 Single-Cell Transcriptomics & Cell2Sentence (C2S) Deconvolution Tool.
 
-Design Principle 1.4 & 1.5:
-- Validates single-cell target expression across tumour vs stroma vs immune cell compartments.
-- Pre-flight gene membership check: returns 'not_present_in_dataset' (never a synthetic rank).
-- Distinguishes stromal targets (FAP in CAFs) from malignant epithelial targets (FOLH1, EPCAM).
-- Computes structured heterogeneity metrics: % positive malignant cells, dispersion, bimodality.
+Design Principles & Remediation:
+- Action 1: Ontology-driven, fail-closed routing via atlas_registry.yaml (no substring matching).
+- Action 2: Split status vocabulary ('not_detected' vs 'no_atlas_for_indication').
+- Action 3: Surface full routing decision in output and provenance.
+- Action 6: Documented and logged membership threshold.
 """
 
 from datetime import datetime, timezone
+import os
+from pathlib import Path
+import re
 from typing import Any
+import yaml
+
 from radiopharm_target_agent.guards import resolve_gene_symbol
-from radiopharm_target_agent.schemas import Claim, SourceRef
+from radiopharm_target_agent.schemas import (
+    Claim,
+    SingleCellRoutingMetadata,
+    SourceRef,
+)
 
 REFERENCE_DATE = datetime(2026, 8, 20, 0, 0, 0, tzinfo=timezone.utc)
 
-# Frozen single-cell reference atlas datasets
-ATLAS_DATASET_REGISTRY: dict[str, dict[str, Any]] = {
-    "pancreatic_adenocarcinoma": {
-        "dataset_id": "PDAC_Peng_Steele_Atlas_v1",
-        "description": "Peng et al. / Steele et al. Single-Cell RNA Sequencing of Human PDAC Tumour and Microenvironment",
-        "total_cells": 57530,
-        "compartments": ["malignant_ductal_epithelial", "cancer_associated_fibroblast", "immune", "endothelial", "normal_acinar"],
-        "gene_membership": {
-            "FAP": {
-                "dominant_compartment": "cancer_associated_fibroblast",
-                "percent_positive_malignant_cells": 0.0,
-                "percent_positive_stroma": 91.4,
-                "expression_dispersion": 0.22,
-                "bimodality": False,
-                "summary": "FAP expression is strictly restricted to cancer-associated fibroblasts (CAFs / stroma) and absent in malignant epithelial ductal cells.",
-            },
-            "EPCAM": {
-                "dominant_compartment": "malignant_ductal_epithelial",
-                "percent_positive_malignant_cells": 95.2,
-                "percent_positive_stroma": 1.2,
-                "expression_dispersion": 0.15,
-                "bimodality": False,
-                "summary": "EPCAM demonstrates uniform, high-density cell-surface expression across malignant ductal epithelial cells.",
-            },
-            "PTPRC": {
-                "dominant_compartment": "immune",
-                "percent_positive_malignant_cells": 0.0,
-                "percent_positive_stroma": 0.0,
-                "percent_positive_immune": 98.1,
-                "expression_dispersion": 0.12,
-                "bimodality": False,
-                "summary": "PTPRC (CD45) is restricted to tumor-infiltrating immune compartments.",
-            },
-            "MSLN": {
-                "dominant_compartment": "malignant_ductal_epithelial",
-                "percent_positive_malignant_cells": 78.4,
-                "percent_positive_stroma": 2.1,
-                "expression_dispersion": 0.45,
-                "bimodality": True,
-                "summary": "Mesothelin is expressed on malignant ductal cells with moderate intratumoural heterogeneity.",
-            },
-        },
-    },
-    "prostate_adenocarcinoma": {
-        "dataset_id": "PCa_Song_Chen_Atlas_v1",
-        "description": "Song et al. / Chen et al. Single-Cell Transcriptomics of Primary and Metastatic Prostate Cancer",
-        "total_cells": 42100,
-        "compartments": ["malignant_luminal_epithelial", "cancer_associated_fibroblast", "immune", "endothelial", "basal"],
-        "gene_membership": {
-            "FOLH1": {
-                "dominant_compartment": "malignant_luminal_epithelial",
-                "percent_positive_malignant_cells": 88.5,
-                "percent_positive_stroma": 0.8,
-                "expression_dispersion": 0.31,
-                "bimodality": False,
-                "summary": "FOLH1 (PSMA) is predominantly and densely expressed on malignant luminal epithelial prostate cancer cells.",
-            },
-            "STEAP1": {
-                "dominant_compartment": "malignant_luminal_epithelial",
-                "percent_positive_malignant_cells": 84.2,
-                "percent_positive_stroma": 1.1,
-                "expression_dispersion": 0.28,
-                "bimodality": False,
-                "summary": "STEAP1 exhibits high malignant cell specificity and uniform membrane distribution.",
-            },
-            "TMEFF2": {
-                "dominant_compartment": "malignant_luminal_epithelial",
-                "percent_positive_malignant_cells": 68.0,
-                "percent_positive_stroma": 2.4,
-                "expression_dispersion": 0.52,
-                "bimodality": True,
-                "summary": "TMEFF2 is expressed on malignant luminal cells with moderate subclonal heterogeneity.",
-            },
-            "DLL3": {
-                "dominant_compartment": "malignant_luminal_epithelial",
-                "percent_positive_malignant_cells": 18.0,
-                "percent_positive_stroma": 0.2,
-                "expression_dispersion": 1.85,
-                "bimodality": True,
-                "summary": "DLL3 expression in standard prostate adenocarcinoma is low (18% positive) and restricted to neuroendocrine transdifferentiated subclones.",
-            },
-        },
-    },
-    "kidney_cortex": {
-        "dataset_id": "KPMP_Lake_Normal_Kidney_v1",
-        "description": "Kidney Precision Medicine Project (KPMP) Single-Cell Reference Atlas",
-        "total_cells": 38900,
-        "compartments": ["proximal_tubule_epithelial", "distal_convoluted_tubule", "podocyte", "endothelial", "interstitial"],
-        "gene_membership": {
-            "FOLH1": {
-                "dominant_compartment": "proximal_tubule_epithelial",
-                "percent_positive_malignant_cells": 0.0,
-                "percent_positive_normal_parenchyma": 62.4,
-                "expression_dispersion": 0.35,
-                "bimodality": False,
-                "summary": "FOLH1 normal kidney baseline is localized to apical brush border membranes of proximal tubule epithelial cells.",
-            },
-        },
-    },
-}
+REGISTRY_PATH = Path(__file__).parent.parent / "atlas_registry.yaml"
+
+
+def load_atlas_registry() -> dict[str, Any]:
+    """Loads the single-cell atlas registry and indication ontology."""
+    if not REGISTRY_PATH.exists():
+        return {"atlases": [], "indication_ontology": {}, "membership_threshold": {}}
+    with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def normalize_indication_string(raw: str) -> str:
+    """
+    Strict normalisation: lowercase, strip punctuation, collapse whitespace.
+    """
+    if not raw:
+        return ""
+    # Strip all non-alphanumeric characters (except whitespace)
+    cleaned = re.sub(r"[^a-zA-Z0-9\s]", " ", raw.lower())
+    # Collapse multiple whitespaces
+    return " ".join(cleaned.split())
+
+
+def route_indication_to_atlas(
+    raw_indication: str,
+    registry: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, SingleCellRoutingMetadata]:
+    """
+    Resolves an indication string to a registered atlas using strict curated ontology.
+
+    Resolution order:
+    1. Exact normalized match against canonical ontology keys.
+    2. Exact match against curated synonyms.
+    3. Fail closed -> returns (None, metadata with 'unmapped').
+
+    STRICT: No substring matching. No fuzzy matching.
+    """
+    if registry is None:
+        registry = load_atlas_registry()
+
+    ontology = registry.get("indication_ontology", {})
+    atlases = {a["id"]: a for a in registry.get("atlases", [])}
+    threshold_info = registry.get("membership_threshold", {})
+    thresh_desc = threshold_info.get(
+        "description", "min count > 0 in >= 1.0% compartment cells"
+    )
+
+    norm_str = normalize_indication_string(raw_indication)
+    norm_key = norm_str.replace(" ", "_")
+
+    selected_atlas_id: str | None = None
+    resolution_method: str = "unmapped"
+
+    # Step 1: Exact canonical match
+    if norm_key in ontology:
+        selected_atlas_id = ontology[norm_key].get("atlas")
+        resolution_method = "exact"
+    elif norm_str in ontology:
+        selected_atlas_id = ontology[norm_str].get("atlas")
+        resolution_method = "exact"
+    else:
+        # Step 2: Synonym table match
+        for can_key, entry in ontology.items():
+            synonyms = entry.get("synonyms", [])
+            norm_synonyms = [
+                normalize_indication_string(str(s)) for s in synonyms
+            ]
+            norm_syn_keys = [s.replace(" ", "_") for s in norm_synonyms]
+            if norm_str in norm_synonyms or norm_key in norm_syn_keys:
+                selected_atlas_id = entry.get("atlas")
+                resolution_method = "synonym"
+                break
+
+    # Step 3: Fail closed if unmapped
+    if not selected_atlas_id or selected_atlas_id not in atlases:
+        meta = SingleCellRoutingMetadata(
+            selected_atlas_id=None,
+            raw_indication=raw_indication,
+            normalized_indication_key=norm_key,
+            resolution_method="unmapped",
+            membership_threshold=thresh_desc,
+        )
+        return None, meta
+
+    atlas_data = atlases[selected_atlas_id]
+    meta = SingleCellRoutingMetadata(
+        selected_atlas_id=selected_atlas_id,
+        raw_indication=raw_indication,
+        normalized_indication_key=norm_key,
+        resolution_method=resolution_method,  # type: ignore
+        n_cells=atlas_data.get("n_cells"),
+        n_patients=atlas_data.get("n_patients"),
+        annotation_source=atlas_data.get("annotation_source"),
+        publication_doi=atlas_data.get("publication_doi"),
+        verified_on=str(atlas_data.get("verified_on")),
+        membership_threshold=thresh_desc,
+    )
+    return atlas_data, meta
 
 
 def analyze_single_cell_target(
-    target_symbol: str, indication: str = "prostate_adenocarcinoma"
+    target_symbol: str, indication: str | None = None
 ) -> dict[str, Any]:
     """
-    Analyzes single-cell transcriptomics (C2S) target specificity and heterogeneity.
+    Validates single-cell target expression across tumour vs stroma vs immune compartments.
 
-    Pre-flight Check (Design Principle 1.5):
-    - Verifies gene membership in reference atlas before running deconvolution.
-    - If absent, returns status='not_present_in_dataset' and refuses synthetic rank.
-
-    Args:
-        target_symbol: Candidate gene symbol or alias.
-        indication: Disease indication or normal tissue reference.
-
-    Returns:
-        Structured deconvolution summary and validated Claims.
+    Applies fail-closed ontology routing and strict membership gating:
+    - If unmapped indication: status='no_atlas_for_indication' (withheld, non-penalizing).
+    - If atlas present but gene below threshold: status='not_detected'.
+    - If gene present: status='measured' with compartment deconvolution & dispersion.
     """
     resolved = resolve_gene_symbol(target_symbol)
     if resolved.get("status") == "abstain":
@@ -155,70 +156,86 @@ def analyze_single_cell_target(
             "target": target_symbol,
             "reason": resolved.get("reason"),
             "claims": {},
+            "routing": None,
         }
 
     canonical = resolved.get("canonical_symbol", target_symbol)
+    indication_str = indication or "prostate_adenocarcinoma"
 
-    # Normalize indication to registry key
-    ind_lower = indication.lower().replace("-", "_").replace(" ", "_")
-    dataset_key = "prostate_adenocarcinoma"
-    if "pancrea" in ind_lower or "pdac" in ind_lower:
-        dataset_key = "pancreatic_adenocarcinoma"
-    elif "prostate" in ind_lower or "prad" in ind_lower or "mcrpc" in ind_lower:
-        dataset_key = "prostate_adenocarcinoma"
-    elif "kidney" in ind_lower or "renal" in ind_lower:
-        dataset_key = "kidney_cortex"
-
-    dataset_info = ATLAS_DATASET_REGISTRY.get(dataset_key)
-    if not dataset_info:
-        return {
-            "status": "not_present_in_dataset",
-            "target": target_symbol,
-            "canonical_symbol": canonical,
-            "indication": indication,
-            "dominant_compartment": None,
-            "percent_positive_malignant_cells": 0.0,
-            "dispersion": 0.0,
-            "bimodality": False,
-            "summary": f"No validated single-cell atlas available for indication '{indication}'.",
-            "claims": {},
-        }
-
-    gene_data = dataset_info["gene_membership"].get(canonical)
-
-    source_ref = SourceRef(
-        kind="c2s",
-        identifier=dataset_info["dataset_id"],
-        retrieved_at=REFERENCE_DATE,
-        version="v1.0",
+    registry = load_atlas_registry()
+    atlas_info, routing_meta = route_indication_to_atlas(
+        indication_str, registry
     )
 
-    if not gene_data:
-        claim_absent = Claim(
+    # 1. Unmapped indication -> Fail closed
+    if not atlas_info:
+        claim_unmapped = Claim(
             field="single_cell_specificity",
-            value="not_present_in_dataset",
-            status="not_detected",
+            value=None,
+            status="no_atlas_for_indication",
             evidence_tier="absent",
-            sources=[source_ref],
+            sources=[],
             confidence="high",
             caveats=[
-                f"Gene '{canonical}' is not present in single-cell atlas '{dataset_info['dataset_id']}'. "
-                "Abstaining from synthetic cell-type assignment."
+                f"No single-cell atlas registered for indication '{indication_str}' (Normalized key: '{routing_meta.normalized_indication_key}'). "
+                "Single-cell evidence withheld; axis will not be penalized."
             ],
         )
         return {
-            "status": "not_present_in_dataset",
+            "status": "no_atlas_for_indication",
             "target": target_symbol,
             "canonical_symbol": canonical,
-            "dataset_id": dataset_info["dataset_id"],
+            "indication": indication_str,
+            "dominant_compartment": None,
+            "percent_positive_malignant_cells": None,
+            "dispersion": None,
+            "bimodality": None,
+            "summary": f"Single-cell evidence unavailable — no atlas registered for indication '{indication_str}'.",
+            "claims": {"single_cell_specificity": claim_unmapped},
+            "routing": routing_meta.model_dump(),
+        }
+
+    atlas_id = atlas_info["id"]
+    doi = atlas_info.get("publication_doi", "DOI_Unavailable")
+    source_ref = SourceRef(
+        kind="c2s",
+        identifier=atlas_id,
+        retrieved_at=REFERENCE_DATE,
+        version=f"DOI:{doi}",
+    )
+
+    gene_membership = atlas_info.get("gene_membership", {})
+    gene_data = gene_membership.get(canonical)
+
+    # 2. Atlas mapped, but gene absent / below membership threshold
+    if not gene_data:
+        claim_absent = Claim(
+            field="single_cell_specificity",
+            value="not_detected",
+            status="not_detected",
+            evidence_tier="sc_rank",
+            sources=[source_ref],
+            confidence="high",
+            caveats=[
+                f"Gene '{canonical}' was not detected above threshold ({routing_meta.membership_threshold}) in atlas '{atlas_id}'. "
+                "Genuinely absent or below single-cell detection threshold in malignant/stromal compartments."
+            ],
+        )
+        return {
+            "status": "not_detected",
+            "target": target_symbol,
+            "canonical_symbol": canonical,
+            "dataset_id": atlas_id,
             "dominant_compartment": None,
             "percent_positive_malignant_cells": 0.0,
             "dispersion": 0.0,
             "bimodality": False,
-            "summary": f"Gene '{canonical}' was not detected above threshold in atlas '{dataset_info['dataset_id']}'.",
+            "summary": f"Gene '{canonical}' was queried in atlas '{atlas_id}' and not detected above threshold.",
             "claims": {"single_cell_specificity": claim_absent},
+            "routing": routing_meta.model_dump(),
         }
 
+    # 3. Target present in atlas -> extract measured compartment and heterogeneity metrics
     dominant_comp = gene_data["dominant_compartment"]
     pct_pos_mal = gene_data.get("percent_positive_malignant_cells", 0.0)
     disp = gene_data.get("expression_dispersion", 0.0)
@@ -246,6 +263,7 @@ def analyze_single_cell_target(
         "sc_expression_dispersion": Claim(
             field="sc_expression_dispersion",
             value=disp,
+            unit="gini_dispersion",
             status="measured",
             evidence_tier="sc_rank",
             sources=[source_ref],
@@ -258,11 +276,15 @@ def analyze_single_cell_target(
             evidence_tier="sc_rank",
             sources=[source_ref],
             confidence="high",
-            caveats=[
-                "Bimodality indicates subclonal expression heterogeneity; non-expressing tumor cells may escape local cross-fire."
-                if bimodal
-                else "Unimodal expression across malignant cells."
-            ],
+        ),
+        "single_cell_specificity": Claim(
+            field="single_cell_specificity",
+            value=dominant_comp,
+            status="measured",
+            evidence_tier="sc_rank",
+            sources=[source_ref],
+            confidence="high",
+            caveats=[gene_data["summary"]],
         ),
     }
 
@@ -270,11 +292,12 @@ def analyze_single_cell_target(
         "status": "success",
         "target": target_symbol,
         "canonical_symbol": canonical,
-        "dataset_id": dataset_info["dataset_id"],
+        "dataset_id": atlas_id,
         "dominant_compartment": dominant_comp,
         "percent_positive_malignant_cells": pct_pos_mal,
         "dispersion": disp,
         "bimodality": bimodal,
         "summary": gene_data["summary"],
         "claims": claims,
+        "routing": routing_meta.model_dump(),
     }

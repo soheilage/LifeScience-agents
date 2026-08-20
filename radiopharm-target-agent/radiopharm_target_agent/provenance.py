@@ -16,16 +16,15 @@
 Provenance, data version stamping, and endpoint health checking.
 
 Implements Gate G4: 100% of claims are version-stamped.
-Implements non-blocking startup health checks (returns 'unavailable', never crashes).
+Remediation Action 3: Surfaces single-cell atlas routing decisions and audit trail.
 """
 
 from datetime import datetime, timezone
 import os
 from typing import Any
 from dotenv import load_dotenv
-import requests
 
-from .schemas import RunProvenance
+from .schemas import RunProvenance, SingleCellRoutingMetadata
 
 load_dotenv()
 
@@ -83,9 +82,20 @@ def check_endpoint_health() -> dict[str, str]:
     return health
 
 
-def get_current_provenance() -> RunProvenance:
+def get_current_provenance(
+    sc_routing: SingleCellRoutingMetadata | dict[str, Any] | None = None,
+) -> RunProvenance:
     """Constructs a current RunProvenance instance with active version stamps."""
     health = check_endpoint_health()
+
+    routing_obj = None
+    if isinstance(sc_routing, SingleCellRoutingMetadata):
+        routing_obj = sc_routing
+    elif isinstance(sc_routing, dict):
+        try:
+            routing_obj = SingleCellRoutingMetadata(**sc_routing)
+        except Exception:
+            routing_obj = None
 
     return RunProvenance(
         timestamp=datetime.now(timezone.utc),
@@ -98,6 +108,7 @@ def get_current_provenance() -> RunProvenance:
         medgemma_endpoint_id=os.getenv("MEDGEMMA_ENDPOINT_ID"),
         c2s_endpoint_id=os.getenv("CELL2SENTENCE_ENDPOINT_ID"),
         endpoint_health_status=health,
+        single_cell_routing=routing_obj,
     )
 
 
@@ -105,8 +116,8 @@ def format_provenance_banner(
     provenance: RunProvenance | dict[str, Any] | None = None,
 ) -> str:
     """
-    Formats a clean markdown header displaying the run provenance.
-    Gracefully accepts RunProvenance instances, dictionaries, or None (auto-generates current).
+    Formats a clean markdown header displaying the run provenance and atlas routing decisions.
+    Gracefully accepts RunProvenance instances, dictionaries, or None.
     """
     if provenance is None:
         prov_obj = get_current_provenance()
@@ -133,6 +144,29 @@ def format_provenance_banner(
         f"- **TxGemma Endpoints:** Chat: `{prov_obj.endpoint_health_status.get('txgemma_chat', 'unavailable')}` | ClinTox: `{prov_obj.endpoint_health_status.get('txgemma_clintox', 'unavailable')}`",
         f"- **MedGemma Endpoint:** `{prov_obj.endpoint_health_status.get('medgemma', 'unavailable')}`",
         f"- **Cell2Sentence Engine:** `{prov_obj.endpoint_health_status.get('cell2sentence', 'local fallback')}`",
-        "---",
     ]
+
+    # Surface Single-Cell Atlas Routing Decision
+    if prov_obj.single_cell_routing:
+        r = prov_obj.single_cell_routing
+        lines.append("- **Single-Cell Atlas Routing:**")
+        if r.selected_atlas_id:
+            lines.append(
+                f"  - **Selected Atlas:** `{r.selected_atlas_id}` (Resolution: `{r.resolution_method}`, Normalized Key: `{r.normalized_indication_key}`)"
+            )
+            lines.append(
+                f"  - **Atlas Specs:** {r.n_cells} cells across {r.n_patients} patients | Source: {r.annotation_source} (DOI: `{r.publication_doi}`)"
+            )
+            lines.append(
+                f"  - **Membership Threshold:** `{r.membership_threshold}` (Verified on `{r.verified_on}`)"
+            )
+        else:
+            lines.append(
+                f"  - **Atlas Status:** `no_atlas_for_indication` (Resolution: `unmapped`, Raw: `{r.raw_indication}`, Normalized Key: `{r.normalized_indication_key}`)"
+            )
+            lines.append(
+                "  - **Audit Note:** Fail-closed ontology check found no verified atlas for this indication. Single-cell axis withheld without penalty."
+            )
+
+    lines.append("---")
     return "\n".join(lines)

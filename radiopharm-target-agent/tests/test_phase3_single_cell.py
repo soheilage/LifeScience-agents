@@ -20,7 +20,7 @@ Tests:
 2. EPCAM in pancreatic atlas returns malignant ductal epithelial dominance.
 3. PTPRC in pancreatic atlas returns immune compartment only.
 4. FOLH1 in kidney atlas returns proximal tubule specificity.
-5. Gene absent from atlas returns 'not_present_in_dataset' with no synthetic rank.
+5. Gene absent from registered atlas returns 'not_detected' with no synthetic rank.
 6. Heterogeneity numerics (% positive malignant cells, dispersion, bimodality).
 """
 
@@ -67,18 +67,18 @@ def test_folh1_kidney_proximal_tubule_localization():
 def test_absent_gene_returns_not_present_without_rank():
     """
     Anti-Hallucination Gate:
-    A valid gene absent from a specific atlas (e.g. STEAP1 in pancreatic atlas)
-    MUST return 'not_present_in_dataset' and no synthetic rank.
+    A valid gene absent from a specific registered atlas (e.g. STEAP1 in pancreatic atlas)
+    MUST return 'not_detected' and no synthetic rank.
     """
     res = analyze_single_cell_target(
         "STEAP1", indication="pancreatic_adenocarcinoma"
     )
-    assert res["status"] == "not_present_in_dataset"
+    assert res["status"] == "not_detected"
     assert res["dominant_compartment"] is None
     assert res["percent_positive_malignant_cells"] == 0.0
     claim = res["claims"]["single_cell_specificity"]
     assert claim.status == "not_detected"
-    assert "not present in single-cell atlas" in claim.caveats[0]
+    assert "was not detected above threshold" in claim.caveats[0]
 
 
 def test_heterogeneity_structured_numerics():
