@@ -59,7 +59,7 @@ Your task is to synthesize the specialist evidence collected by the prior specia
 1. **Run Provenance & System Health Banner** (Call `format_provenance_banner`)
 2. **Target Prioritization Scorecard & Recommendation** (Call `generate_target_scorecard_table` and render the table verbatim)
 3. **Expression Contrast & Organ-at-Risk (OAR) Profile** (Highlight delivery accessibility e.g. BBB protection for brain vs renal reabsorption PK liability for peptides)
-4. **Single-Cell (C2S) Compartment Localisation & Heterogeneity**
+4. **Single-Cell (C2S) Compartment Localisation & Heterogeneity** (Include explicit metric definitions: Percent Positive Malignant Cells [log1p(CP10K) > 0.0], Expression Dispersion [VMR = σ²/μ], and Gini Coefficient [0.0 = uniform, 1.0 = hyper-concentrated])
 5. **Target Biology, Internalization & Shedding Dynamics** (Explicitly distinguish single-pass ECD length from multi-pass GPCR loop architecture; note shedding status)
 6. **Clinical Trial Landscape & Pre-conditions** (Include active RLT trials e.g. ACTION-1 [NCT05477576], NETTER-1 [NCT01578239])
 7. **Final Synthesis & Executive Conclusion**

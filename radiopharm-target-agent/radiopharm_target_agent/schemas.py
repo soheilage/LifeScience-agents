@@ -171,6 +171,7 @@ class RunProvenance(BaseModel):
     c2s_endpoint_id: str | None = None
     endpoint_health_status: dict[str, str] = Field(default_factory=dict)
     single_cell_routing: SingleCellRoutingMetadata | None = None
+    build_sha: str | None = None
 
 
 class EvidenceBundle(BaseModel):

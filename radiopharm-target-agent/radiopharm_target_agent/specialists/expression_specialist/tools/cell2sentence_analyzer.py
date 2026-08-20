@@ -50,12 +50,45 @@ def get_atlas_registry_checksum() -> str:
     return hashlib.sha256(REGISTRY_PATH.read_bytes()).hexdigest()
 
 
+def validate_atlas_registry_populations(registry: dict[str, Any]) -> None:
+    """
+    R1 Structural Fix: Validates that every atlas entry in atlas_registry.yaml declares a 'population'
+    field matching its registered indication key(s). Raises ValueError if a population mismatch occurs.
+    """
+    atlases = registry.get("atlases", [])
+    ontology = registry.get("indication_ontology", {})
+
+    for atlas in atlases:
+        atlas_id = atlas.get("id", "unknown_atlas")
+        population = atlas.get("population")
+        if not population:
+            raise ValueError(f"Atlas '{atlas_id}' is missing required 'population' field in registry.")
+
+        norm_pop = population.strip().lower().replace("-", "_").replace(" ", "_")
+        indications = atlas.get("indications", [])
+        for ind in indications:
+            norm_ind = ind.strip().lower().replace("-", "_").replace(" ", "_")
+            if norm_pop != norm_ind:
+                # Check synonyms in ontology
+                synonyms = [
+                    s.strip().lower().replace("-", "_").replace(" ", "_")
+                    for s in ontology.get(norm_ind, {}).get("synonyms", [])
+                ]
+                if norm_pop not in synonyms:
+                    raise ValueError(
+                        f"Population mismatch in atlas '{atlas_id}': declared population '{population}' "
+                        f"does not match registered indication '{ind}' or its ontology synonyms. Atlas loading refused."
+                    )
+
+
 def load_atlas_registry() -> dict[str, Any]:
-    """Loads the single-cell atlas registry and indication ontology."""
+    """Loads the single-cell atlas registry and indication ontology, enforcing population validation."""
     if not REGISTRY_PATH.exists():
         return {"atlases": [], "indication_ontology": {}, "membership_threshold": {}}
     with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+        data = yaml.safe_load(f) or {}
+    validate_atlas_registry_populations(data)
+    return data
 
 
 def normalize_indication_string(raw: str) -> str:

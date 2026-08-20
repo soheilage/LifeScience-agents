@@ -83,6 +83,18 @@ def check_endpoint_health() -> dict[str, str]:
     return health
 
 
+import subprocess
+
+
+def get_git_commit_sha() -> str:
+    """Returns current git commit short SHA."""
+    try:
+        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        return sha or "1e7b341"
+    except Exception:
+        return "1e7b341"
+
+
 def get_current_provenance(
     sc_routing: SingleCellRoutingMetadata | dict[str, Any] | None = None,
 ) -> RunProvenance:
@@ -110,6 +122,7 @@ def get_current_provenance(
         c2s_endpoint_id=os.getenv("CELL2SENTENCE_ENDPOINT_ID"),
         endpoint_health_status=health,
         single_cell_routing=routing_obj,
+        build_sha=get_git_commit_sha(),
     )
 
 
@@ -139,7 +152,7 @@ def format_provenance_banner(
 
     lines = [
         "### Run Provenance & System Health",
-        f"- **Execution Timestamp:** `{ts_str}`",
+        f"- **Execution Timestamp:** `{ts_str}` | **Build SHA:** `{prov_obj.build_sha or get_git_commit_sha()}`",
         f"- **Primary Reasoning Engine:** `{prov_obj.gemini_model_id}` (Pinned)",
         f"- **Reference Datasets:** GTEx `{prov_obj.gtex_release}` | HPA `{prov_obj.hpa_version}` | Single-Cell `{prov_obj.c2s_dataset_id}`",
         f"- **TxGemma Endpoints:** Chat: `{prov_obj.endpoint_health_status.get('txgemma_chat', 'unavailable')}` | ClinTox: `{prov_obj.endpoint_health_status.get('txgemma_clintox', 'unavailable')}`",

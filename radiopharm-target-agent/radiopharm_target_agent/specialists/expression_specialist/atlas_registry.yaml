@@ -13,6 +13,7 @@ membership_threshold:
 
 atlases:
   - id: PDAC_Peng_Steele_Atlas_v1
+    population: "pancreatic_ductal_adenocarcinoma"
     indications:
       - pancreatic_ductal_adenocarcinoma
     compartments:
@@ -63,6 +64,7 @@ atlases:
         summary: "Mesothelin is expressed on malignant ductal cells with moderate intratumoural heterogeneity."
 
   - id: PCa_Song_Chen_Atlas_v1
+    population: "prostate_adenocarcinoma"
     indications:
       - prostate_adenocarcinoma
     compartments:
@@ -112,6 +114,7 @@ atlases:
         summary: "DLL3 expression in standard prostate adenocarcinoma is low (18% positive) and restricted to neuroendocrine transdifferentiated subclones."
 
   - id: GEP_NET_Chan_Atlas_v1
+    population: "gastroenteropancreatic_neuroendocrine_tumour"
     indications:
       - gastroenteropancreatic_neuroendocrine_tumour
     compartments:
@@ -136,6 +139,7 @@ atlases:
         summary: "SSTR2 demonstrates high-density, uniform cell-surface expression on malignant neuroendocrine epithelial cells in well-differentiated GEP-NETs."
 
   - id: KPMP_Lake_Normal_Kidney_v1
+    population: "kidney_cortex"
     indications:
       - kidney_cortex
     compartments:

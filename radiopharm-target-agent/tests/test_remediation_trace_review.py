@@ -200,3 +200,35 @@ def test_b8_gep_net_atlas_doi():
     gep_atlas = atlas_map["GEP_NET_Chan_Atlas_v1"]
     assert gep_atlas["publication_doi"] == "10.1186/s12943-025-02231-y"
     assert gep_atlas["geo_accession"] == "GSE211485"
+
+
+def test_r1_population_validation_mismatch_refuses_to_load():
+    """
+    R1 Regression Test: Registering an atlas whose declared population does not match its registered indication
+    causes validate_atlas_registry_populations to raise ValueError and refuse to load.
+    """
+    import pytest
+    from radiopharm_target_agent.specialists.expression_specialist.tools.cell2sentence_analyzer import (
+        validate_atlas_registry_populations,
+    )
+
+    bad_registry = {
+        "atlases": [
+            {
+                "id": "MOCK_MISMATCHED_ATLAS",
+                "population": "colorectal_neuroendocrine_tumour",
+                "indications": ["gastroenteropancreatic_neuroendocrine_tumour"],
+            }
+        ],
+        "indication_ontology": {
+            "gastroenteropancreatic_neuroendocrine_tumour": {
+                "synonyms": ["gep_net", "gepnet"]
+            }
+        },
+    }
+
+    with pytest.raises(ValueError) as excinfo:
+        validate_atlas_registry_populations(bad_registry)
+
+    assert "Population mismatch in atlas 'MOCK_MISMATCHED_ATLAS'" in str(excinfo.value)
+    assert "does not match registered indication" in str(excinfo.value)

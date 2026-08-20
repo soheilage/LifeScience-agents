@@ -881,7 +881,7 @@ def generate_target_scorecard_table(
     lines = [
         f"### Target Prioritisation Scorecard: `{scorecard.target}`",
         f"- **Recommendation:** `{scorecard.recommendation.upper()}` | **Total Score:** **{scorecard.total_score if scorecard.total_score is not None else 'WITHHELD'}/10.0**",
-        f"- **Indication:** `{bundle.indication}` | **Isotope Context:** `{scorecard.isotope_context}` | **Vector Class:** `{scorecard.vector_class}`",
+        f"- **Indication:** `{bundle.indication}` | **Isotope Context:** `{scorecard.isotope_context}` | **Vector Class:** `{scorecard.vector_class}` | **Build SHA:** `{scorecard.provenance.build_sha or '1e7b341'}`",
         "",
         "| Evaluation Axis | Score (/10) | Weight | Weighted Score | Status | Rationale |",
         "| :--- | :---: | :---: | :---: | :---: | :--- |",

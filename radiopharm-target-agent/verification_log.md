@@ -97,3 +97,47 @@
 | **Ac-225 (Alpha Emitter)** | SSTR2 | **8.67** | `HIGH_PRIORITY` | Strict OAR strictness ($1.30\times$), heterogeneity multiplier ($1.40\times$), rapid internalization benefit. |
 | **Lu-177 (Beta Emitter)** | SSTR2 | **8.92** | `HIGH_PRIORITY` | Standard OAR strictness ($1.00\times$), beta cross-fire heterogeneity tolerance multiplier ($0.80\times$). |
 | **Delta ($\Delta$)** | — | **+0.25 pts** | Stable | **Isotope context actively modulates scorecard numerics.** |
+
+---
+
+## Phase 4 — Residual Action Items (R1–R4 Audit & Structural Fixes)
+
+### R1 — Atlas / Population Validation & Load-Time Fail-Closed Gate
+- **Population Audit**:
+  - `DOI 10.1186/s12943-025-02231-y`: Zhou et al. *Mol Cancer* 2025 (*"Comprehensive single-cell atlas of colorectal neuroendocrine tumors..."*).
+  - `GEO GSE211485`: Gastroenteropancreatic neuroendocrine neoplasias single-cell dataset (PMC11748842 / PMID:39838423).
+- **Structural Fix (`validate_atlas_registry_populations`)**:
+  - Added required `population` field to all atlas entries in [`atlas_registry.yaml`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/radiopharm_target_agent/specialists/expression_specialist/atlas_registry.yaml).
+  - Implemented `validate_atlas_registry_populations` in [`cell2sentence_analyzer.py`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/radiopharm_target_agent/specialists/expression_specialist/tools/cell2sentence_analyzer.py). `load_atlas_registry()` executes load-time population validation against declared indication keys and ontology synonyms.
+- **Regression Test**:
+  - Added `test_r1_population_validation_mismatch_refuses_to_load` in [`test_remediation_trace_review.py`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/tests/test_remediation_trace_review.py). Registering a mismatched atlas (e.g. `colorectal_neuroendocrine_tumour` under `gastroenteropancreatic_neuroendocrine_tumour`) raises `ValueError` and refuses to load.
+
+---
+
+### R2 — Explanation of Single-Cell Metric Change (92.4% -> 91.2%) & Quarantine Boundary
+- **Cause of 92.4% Figure**: No `.h5ad` file was present on disk during session 1. The 92.4% figure was model-generated prior to the implementation of the compute-or-abstain fail-closed routing gate.
+- **Curated Baseline (91.2%)**: 91.2% is the curated baseline in [`atlas_registry.yaml`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/radiopharm_target_agent/specialists/expression_specialist/atlas_registry.yaml), cryptographically locked by SHA-256 (`889f0dfc62b1...`).
+- **Quarantine Boundary**: All target prioritization briefs generated prior to commit `aa00b28` (compute-or-abstain gate implementation) are formally marked as **quarantined and unverified** for single-cell numerics.
+- **Explicit Metric Definitions in Brief Header**: Updated [`WRITER_PROMPT`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/radiopharm_target_agent/prompt.py) to require rendering explicit metric definitions:
+  - *Percent Positive Malignant Cells*: $\log1p(\text{CP10K}) > 0.0$
+  - *Expression Dispersion*: $\text{VMR} = \sigma^2 / \mu$
+  - *Gini Coefficient*: $0.0 = \text{uniform}$, $1.0 = \text{hyper-concentrated}$
+
+---
+
+### R3 — Total Score Reconciliation & Build SHA Stamping
+- **Reconciliation**:
+  - **8.67**: Baseline Ac-225 SSTR2 target score in GEP-NET with complete clinical trial precedent (+3.5 approved therapeutic Lutathera, +1.5 Phase 2/3 precedent, +1.0 isotope precedent).
+  - **8.45 -> 8.51**: Intermediate sensitivity check run against an early partial EvidenceBundle.
+- **Build SHA Stamping**:
+  - Added `build_sha` field to `RunProvenance` in [`schemas.py`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/radiopharm_target_agent/schemas.py).
+  - Stamped `Build SHA` on every emitted scorecard header and provenance banner (`format_provenance_banner` & `generate_target_scorecard_table`).
+
+---
+
+### R4 — SME Sign-Off Record & Mechanism Conditioning
+- **Verified Sign-Off (2026-08-21)**: Radiopharmacy & Nuclear Medicine SME panel verified and documented in [`weights.yaml`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/weights.yaml).
+- **Conditioning Rules**:
+  - *BBB Protection*: Hydrophilic peptides ($V_d < 0.05\text{ L/kg}$) vs lipophilic small molecules ($\log D > 2.0$) under intact BBB vs compromised tumor vasculature in brain metastases.
+  - *Renal Reabsorption*: Glomerular filtration and proximal tubular endocytosis via megalin/cubilin is restricted to low-MW peptides ($< 30\text{ kDa}$); excluded for IgGs ($\sim 150\text{ kDa}$).
+
