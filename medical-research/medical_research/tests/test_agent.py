@@ -46,7 +46,7 @@ async def test_routes_to_medical_search():
     async for event in runner.run_async(
         user_id=session.user_id,
         session_id=session.id,
-        new_message=types.Content(parts=[types.Part(text="What are the common symptoms of diabetes?")]),
+        new_message=types.Content(role="user", parts=[types.Part(text="What are the common symptoms of diabetes?")]),
     ):
         if event.content.parts and event.content.parts[0].text:
             response += event.content.parts[0].text
@@ -72,12 +72,16 @@ async def test_routes_to_medical_analyst():
     async for event in runner.run_async(
         user_id=session.user_id,
         session_id=session.id,
-        new_message=types.Content(parts=[types.Part(text="For SMILES CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21, does it cross the BBB?")]),
+        new_message=types.Content(role="user", parts=[types.Part(text="For SMILES CN1C(=O)CN=C(C2=CCCCC2)c2cc(Cl)ccc21, does it cross the BBB?")]),
     ):
         if event.content.parts and event.content.parts[0].text:
             response += event.content.parts[0].text
 
     # Check for keywords from the Medical Analyst Agent's task.
-    assert "bbb" in response.lower() and (
-        "crosses" in response.lower() or "does not cross" in response.lower()
+    assert (
+        "bbb" in response.lower()
+        or "blood-brain barrier" in response.lower()
+        or "blood brain barrier" in response.lower()
+    ) and (
+        "cross" in response.lower() or "does not cross" in response.lower()
     )

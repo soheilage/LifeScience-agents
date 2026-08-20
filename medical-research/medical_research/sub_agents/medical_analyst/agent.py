@@ -25,6 +25,7 @@ MODEL = "gemini-2.5-pro"
 medical_analyst_agent = Agent(
     model=MODEL,
     name="medical_analyst_agent",
+    description="Analyzes chemical compounds and predicts drug properties such as blood-brain barrier (BBB) penetration from SMILES strings.",
     instruction=prompt.MEDICAL_ANALYST_PROMPT,
     # Give the agent its new tool
     tools=[tools.predict_bbb_crossing],

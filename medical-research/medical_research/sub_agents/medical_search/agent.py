@@ -26,6 +26,7 @@ MODEL = "gemini-2.5-pro"
 medical_search_agent = Agent(
     model=MODEL,
     name="medical_search_agent",
+    description="Answers general medical questions about diseases, symptoms, treatments, and medical topics using MedGemma.",
     instruction=prompt.MEDICAL_SEARCH_PROMPT,
     # Give the agent its new tool
     tools=[tools.query_medical_knowledge],
