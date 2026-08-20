@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 780" width="100%" height="100%">
+  <defs>
+    <style>
+      .title-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 700; font-size: 22px; fill: #202124; }
+      .subtitle-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; fill: #5f6368; }
+      .node-header { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 700; font-size: 16px; fill: #ffffff; }
+      .node-sub { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 13px; fill: #f1f3f4; }
+      .tool-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; font-size: 14px; fill: #202124; }
+      .tool-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #5f6368; }
+      .label-text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; font-size: 12px; fill: #1a73e8; }
+      .box-shadow { filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.08)); }
+    </style>
+    
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a73e8" />
+      <stop offset="100%" stop-color="#1557b0" />
+    </linearGradient>
+
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34a853" />
+      <stop offset="100%" stop-color="#1e7e34" />
+    </linearGradient>
+
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9334e8" />
+      <stop offset="100%" stop-color="#681da8" />
+    </linearGradient>
+
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef7e0" />
+      <stop offset="100%" stop-color="#feefc3" />
+    </linearGradient>
+
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#1a73e8" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34a853" />
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#9334e8" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="780" rx="16" fill="#f8f9fa" stroke="#dadce0" stroke-width="1" />
+
+  <!-- Title Section -->
+  <text x="550" y="45" text-anchor="middle" class="title-text">Agentic-Tx: Multi-Agent Drug Discovery Architecture</text>
+  <text x="550" y="70" text-anchor="middle" class="subtitle-text">Autonomous research system leveraging Vertex AI Agent Platform &amp; TxGemma Foundation Models</text>
+
+  <!-- User Query Node -->
+  <g class="box-shadow" transform="translate(425, 95)">
+    <rect width="250" height="50" rx="25" fill="#ffffff" stroke="#1a73e8" stroke-width="2" />
+    <text x="125" y="31" text-anchor="middle" class="tool-title" fill="#1a73e8">👤 User Research Query</text>
+  </g>
+
+  <!-- Arrow down to Coordinator -->
+  <path d="M 550 145 L 550 185" fill="none" stroke="#1a73e8" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- Discovery Coordinator Node -->
+  <g class="box-shadow" transform="translate(350, 190)">
+    <rect width="400" height="85" rx="12" fill="url(#blueGrad)" stroke="#1557b0" stroke-width="1" />
+    <text x="200" y="35" text-anchor="middle" class="node-header">Discovery Coordinator (Main Agent)</text>
+    <text x="200" y="58" text-anchor="middle" class="node-sub">Model: Gemini 2.5 Pro</text>
+    <text x="200" y="75" text-anchor="middle" font-size="11" fill="#e8f0fe">Cognitive Loop: Hypothesize → Plan → Delegate → Synthesize</text>
+  </g>
+
+  <!-- Branching Arrows to Specialists -->
+  <path d="M 430 275 L 260 340" fill="none" stroke="#34a853" stroke-width="2" marker-end="url(#arrow-green)" />
+  <text x="320" y="300" text-anchor="middle" class="label-text" fill="#34a853">Delegates Chemistry</text>
+
+  <path d="M 670 275 L 840 340" fill="none" stroke="#9334e8" stroke-width="2" marker-end="url(#arrow-purple)" />
+  <text x="780" y="300" text-anchor="middle" class="label-text" fill="#9334e8">Delegates Literature</text>
+
+  <!-- LEFT: Compound Analyzer Specialist Container -->
+  <rect x="40" y="345" width="450" height="320" rx="12" fill="#ffffff" stroke="#e6f4ea" stroke-width="2" class="box-shadow" />
+  <g transform="translate(60, 360)">
+    <rect width="410" height="55" rx="8" fill="url(#greenGrad)" />
+    <text x="205" y="27" text-anchor="middle" class="node-header">Compound Analyzer (Specialist)</text>
+    <text x="205" y="47" text-anchor="middle" class="node-sub">Model: Gemini 3.6 Flash</text>
+  </g>
+
+  <!-- Compound Analyzer Tools -->
+  <g transform="translate(60, 430)">
+    <!-- Tool 1: Identify Compound -->
+    <rect width="410" height="65" rx="8" fill="#f8f9fa" stroke="#dadce0" stroke-width="1" />
+    <text x="15" y="25" class="tool-title">🔬 identify_compound</text>
+    <text x="15" y="45" class="tool-desc">Retrieves compound IUPAC name &amp; formula from SMILES (PubChem)</text>
+
+    <!-- Tool 2: Get SMILES -->
+    <g transform="translate(0, 75)">
+      <rect width="410" height="65" rx="8" fill="#f8f9fa" stroke="#dadce0" stroke-width="1" />
+      <text x="15" y="25" class="tool-title">🧬 get_smiles_from_name</text>
+      <text x="15" y="45" class="tool-desc">Resolves brand/common names to canonical SMILES string</text>
+    </g>
+
+    <!-- Tool 3: Predict Toxicity (TxGemma) -->
+    <g transform="translate(0, 150)">
+      <rect width="410" height="70" rx="8" fill="url(#amberGrad)" stroke="#f9ab00" stroke-width="1.5" />
+      <text x="15" y="26" class="tool-title" fill="#b06000">⚡ predict_clinical_toxicity</text>
+      <text x="15" y="46" class="tool-desc" fill="#5f6368">TxGemma Predict 9B on Vertex AI (2x NVIDIA L4 GPUs)</text>
+      <text x="15" y="62" class="tool-desc" fill="#b06000" font-weight="600">Task: Binary ClinTox clinical trial safety prediction</text>
+    </g>
+  </g>
+
+  <!-- RIGHT: Literature Researcher Specialist Container -->
+  <rect x="610" y="345" width="450" height="320" rx="12" fill="#ffffff" stroke="#f3e8fd" stroke-width="2" class="box-shadow" />
+  <g transform="translate(630, 360)">
+    <rect width="410" height="55" rx="8" fill="url(#purpleGrad)" />
+    <text x="205" y="27" text-anchor="middle" class="node-header">Literature Researcher (Specialist)</text>
+    <text x="205" y="47" text-anchor="middle" class="node-sub">Model: Gemini 3.6 Flash</text>
+  </g>
+
+  <!-- Literature Researcher Tools -->
+  <g transform="translate(630, 430)">
+    <!-- Tool 1: PubMed -->
+    <rect width="410" height="65" rx="8" fill="#f8f9fa" stroke="#dadce0" stroke-width="1" />
+    <text x="15" y="25" class="tool-title">📚 fetch_pubmed_articles</text>
+    <text x="15" y="45" class="tool-desc">Queries NCBI PubMed API for peer-reviewed therapeutic literature</text>
+
+    <!-- Tool 2: Therapeutics Expert (TxGemma Chat) -->
+    <g transform="translate(0, 75)">
+      <rect width="410" height="70" rx="8" fill="url(#amberGrad)" stroke="#f9ab00" stroke-width="1.5" />
+      <text x="15" y="26" class="tool-title" fill="#b06000">💬 ask_therapeutics_expert</text>
+      <text x="15" y="46" class="tool-desc" fill="#5f6368">TxGemma Chat 9B on Vertex AI (2x NVIDIA L4 GPUs)</text>
+      <text x="15" y="62" class="tool-desc" fill="#b06000" font-weight="600">Task: Deep cellular mechanisms &amp; pharmacodynamics reasoning</text>
+    </g>
+
+    <!-- Tool 3: Placeholder / General Tools -->
+    <g transform="translate(0, 155)">
+      <rect width="410" height="60" rx="8" fill="#f8f9fa" stroke="#dadce0" stroke-width="1" />
+      <text x="15" y="25" class="tool-title">🔎 Evidence Synthesis Support</text>
+      <text x="15" y="45" class="tool-desc">Biological context validation and clinical trial context mapping</text>
+    </g>
+  </g>
+
+  <!-- Feedback arrows to synthesis -->
+  <path d="M 265 670 L 480 710" fill="none" stroke="#34a853" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-green)" />
+  <path d="M 835 670 L 620 710" fill="none" stroke="#9334e8" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow-purple)" />
+
+  <!-- Final Synthesized Report Box -->
+  <g class="box-shadow" transform="translate(320, 690)">
+    <rect width="460" height="65" rx="10" fill="#ffffff" stroke="#1a73e8" stroke-width="2" />
+    <text x="230" y="28" text-anchor="middle" class="tool-title" fill="#1a73e8">📄 Comprehensive Scientific Report</text>
+    <text x="230" y="48" text-anchor="middle" class="tool-desc">Structured Output: Execution Plan + Comprehensive Analysis</text>
+  </g>
+
+</svg>
