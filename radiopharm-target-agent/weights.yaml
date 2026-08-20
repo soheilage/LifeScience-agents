@@ -1,0 +1,60 @@
+# Version 1.0.0 - Radiopharmaceutical Target Prioritization Scoring Weights
+version: "1.0.0"
+description: "Deterministic scoring weights and isotope modulation parameters for radiopharmaceutical target assessment."
+
+# Base scoring weights across evaluation axes (sum to 1.0)
+base_weights:
+  tumour_selectivity: 0.20
+  oar_safety_margin: 0.20
+  malignant_cell_specificity: 0.15
+  heterogeneity_penalty: 0.10
+  internalisation_suitability: 0.10
+  shedding_penalty: 0.10
+  clinical_pipeline_maturity: 0.08
+  tractability: 0.07
+
+# Organ-at-Risk (OAR) Radiosensitivity Weights
+# Organ toxicity impact multipliers for targeted radiotherapy
+oar_radiosensitivity_weights:
+  kidney_cortex: 1.50       # Critical dose-limiting organ for peptide radioligands (renal tubule retention)
+  bone_marrow: 1.40         # Hematological toxicity, myelosuppression
+  salivary_gland: 1.20      # Dose-limiting for PSMA Ac-225/Lu-177 (xerostomia)
+  lacrimal_gland: 1.10      # Ocular toxicity / dry eye
+  liver: 1.00               # Hepatic clearance / metabolic burden
+  spleen: 1.00              # Reticuloendothelial uptake
+  gi_tract: 1.00            # Intestinal mucosa toxicity
+  lung: 1.10                # Radiation pneumonitis risk
+  brain: 1.30               # Neurotoxicity
+
+# Isotope Modulation Rules
+isotope_modulation:
+  # Beta emitters: longer range (1-2mm cross-fire effect), residualising radiometals benefit from internalization
+  beta:
+    isotopes: ["Lu-177", "Y-90", "I-131", "Tb-161"]
+    heterogeneity_weight_multiplier: 0.80  # Cross-fire allows moderate tolerance for patchy expression
+    internalisation_weight_multiplier: 1.20 # Lysosomal trapping retains beta emitter payload inside cell
+    oar_margin_strictness: 1.00
+
+  # Alpha emitters: short range (50-100um high-LET tracks), double-strand DNA breaks
+  alpha:
+    isotopes: ["Ac-225", "Pb-212"]
+    heterogeneity_weight_multiplier: 1.40  # Must hit virtually every tumor cell; cold cells escape
+    internalisation_weight_multiplier: 0.90 # High linear energy transfer active at membrane or internalized
+    oar_margin_strictness: 1.30            # Highly strict on OAR toxicity due to irreversible alpha damage
+
+  # Diagnostic isotopes: SPECT / PET imaging agents
+  diagnostic:
+    isotopes: ["Ga-68"]
+    heterogeneity_weight_multiplier: 0.70
+    internalisation_weight_multiplier: 1.00
+    oar_margin_strictness: 0.90
+
+# Evidence tier score caps
+# Transcript-level evidence caps the achievable selectivity score; protein evidence lifts it.
+evidence_tier_caps:
+  protein_quant: 10.0
+  protein_ihc: 9.0
+  bulk_rna: 7.0
+  sc_rank: 8.0
+  literature: 6.5
+  absent: 0.0

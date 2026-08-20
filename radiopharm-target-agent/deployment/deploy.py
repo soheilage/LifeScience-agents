@@ -1,0 +1,137 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Deployment script for the Radiopharmaceutical Target Assessment Agent on Vertex AI Agent Engine.
+"""
+
+import os
+import sys
+
+# Ensure current project directory is in python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import vertexai
+from absl import app, flags
+from dotenv import load_dotenv
+from radiopharm_target_agent.agent import root_agent
+from vertexai import agent_engines
+from vertexai.preview.reasoning_engines import AdkApp
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string("project_id", None, "GCP project ID.")
+flags.DEFINE_string("location", None, "GCP location.")
+flags.DEFINE_string("bucket", None, "GCP storage bucket for staging.")
+flags.DEFINE_string("resource_id", None, "Agent Engine resource ID for deletion.")
+flags.DEFINE_bool("create", False, "Creates a new agent engine.")
+flags.DEFINE_bool("delete", False, "Deletes an existing agent engine.")
+flags.DEFINE_bool("list", False, "Lists all agent engines.")
+flags.mark_bool_flags_as_mutual_exclusive(["create", "delete", "list"])
+
+
+def create_agent(env_vars: dict[str, str]):
+    """Creates a new Agent Engine for radiopharm-target-agent."""
+    adk_app = AdkApp(agent=root_agent)
+    remote_agent = agent_engines.create(
+        adk_app,
+        display_name="radiopharm-target-agent",
+        description="Multi-agent radiopharmaceutical target assessment and deterministic prioritisation system.",
+        requirements=[
+            "google-adk>=2.5.0",
+            "google-genai>=1.0.0",
+            "google-cloud-aiplatform>=1.75.0",
+            "pydantic>=2.10.6",
+            "python-dotenv>=1.0.1",
+            "requests>=2.32.0",
+            "pypdf>=4.0.0",
+            "beautifulsoup4>=4.12.3",
+            "biopython>=1.83",
+            "pubchempy>=1.0.4",
+            "tenacity>=9.0.0",
+            "pandas>=2.0.0",
+            "numpy>=1.24.0",
+            "pyyaml>=6.0.0",
+            "diskcache>=5.6.0",
+        ],
+        extra_packages=["./radiopharm_target_agent"],
+        env_vars=env_vars,
+    )
+    print(f"Created remote agent engine: {remote_agent.resource_name}")
+
+
+def delete_agent(resource_id: str):
+    """Deletes an existing Agent Engine."""
+    remote_agent = agent_engines.get(resource_id)
+    remote_agent.delete(force=True)
+    print(f"Deleted remote agent engine: {resource_id}")
+
+
+def list_agents():
+    """Lists all Agent Engines in the project."""
+    remote_agents = agent_engines.list()
+    if not remote_agents:
+        print("No remote agent engines found.")
+        return
+
+    print("All remote agent engines:")
+    for agent in remote_agents:
+        print(f"- {agent.name} (Display Name: {agent.display_name})")
+
+
+def main(_):
+    load_dotenv()
+    env_vars = {}
+
+    project_id = FLAGS.project_id or os.getenv("GOOGLE_CLOUD_PROJECT")
+    location = FLAGS.location or os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    bucket = FLAGS.bucket or os.getenv("GOOGLE_CLOUD_STORAGE_BUCKET")
+
+    # Load environment variables for the agent engine runtime
+    env_vars["GEMINI_MODEL_ID"] = os.getenv("GEMINI_MODEL_ID", "gemini-2.5-pro")
+    env_vars["TXGEMMA_CHAT_ENDPOINT_ID"] = os.getenv("TXGEMMA_CHAT_ENDPOINT_ID", "")
+    env_vars["TXGEMMA_PREDICT_ENDPOINT_ID"] = os.getenv("TXGEMMA_PREDICT_ENDPOINT_ID", "")
+    env_vars["MEDGEMMA_ENDPOINT_ID"] = os.getenv("MEDGEMMA_ENDPOINT_ID", "")
+    env_vars["CELL2SENTENCE_ENDPOINT_ID"] = os.getenv("CELL2SENTENCE_ENDPOINT_ID", "")
+    env_vars["GTEX_RELEASE"] = os.getenv("GTEX_RELEASE", "v8")
+    env_vars["HPA_VERSION"] = os.getenv("HPA_VERSION", "v23.0")
+    env_vars["C2S_DATASET_ID"] = os.getenv("C2S_DATASET_ID", "c2s_v1_curated")
+    env_vars["NCBI_API_KEY"] = os.getenv("NCBI_API_KEY", "")
+    env_vars["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
+    env_vars["GOOGLE_CLOUD_LOCATION"] = location
+    env_vars["CLOUD_ML_PROJECT_ID"] = project_id
+
+    if FLAGS.create:
+        if not all([project_id, location, bucket]):
+            raise ValueError(
+                "Missing required configuration. Please set GOOGLE_CLOUD_PROJECT, "
+                "GOOGLE_CLOUD_LOCATION, and GOOGLE_CLOUD_STORAGE_BUCKET."
+            )
+        vertexai.init(
+            project=project_id, location=location, staging_bucket=f"gs://{bucket}"
+        )
+        create_agent(env_vars)
+    elif FLAGS.delete:
+        if not FLAGS.resource_id:
+            raise ValueError("The --resource_id flag is required to delete an agent.")
+        vertexai.init(project=project_id, location=location)
+        delete_agent(FLAGS.resource_id)
+    elif FLAGS.list:
+        vertexai.init(project=project_id, location=location)
+        list_agents()
+    else:
+        print("No action specified. Use --create, --delete, or --list.")
+
+
+if __name__ == "__main__":
+    app.run(main)

@@ -1,0 +1,91 @@
+{
+  "reference_date": "2026-08-20",
+  "version": "1.0.0",
+  "description": "Frozen reference answers for radiopharm-target-agent control target panel.",
+  "targets": {
+    "FOLH1": {
+      "gene_symbol": "FOLH1",
+      "common_alias": "PSMA",
+      "role": "Primary positive control",
+      "cell_surface": true,
+      "topology": "Single-pass type II membrane protein",
+      "expected_outcome": "Passes all gates; high tumour selectivity in prostate cancer; kidney and salivary gland OAR caveats noted; clinically validated.",
+      "oar_expected": {
+        "kidney_cortex": "measured",
+        "salivary_gland": "measured",
+        "lacrimal_gland": "not_measured",
+        "bone_marrow": "not_measured"
+      },
+      "malignant_specificity": "High malignant cell enrichment in prostate adenocarcinoma."
+    },
+    "SSTR2": {
+      "gene_symbol": "SSTR2",
+      "common_alias": "SSTR2",
+      "role": "Positive control (internalisation)",
+      "cell_surface": true,
+      "topology": "Multi-pass (7TM GPCR) membrane protein",
+      "expected_outcome": "Passes all gates; rapid receptor-mediated internalization; highly favorable for Lu-177/Ac-225 NET radioligands.",
+      "oar_expected": {
+        "kidney_cortex": "measured",
+        "bone_marrow": "not_measured"
+      }
+    },
+    "FAP": {
+      "gene_symbol": "FAP",
+      "common_alias": "FAP",
+      "role": "Stroma negative control",
+      "cell_surface": true,
+      "topology": "Single-pass type II membrane protein",
+      "expected_outcome": "Identified as cancer-associated fibroblast / stroma target, NOT malignant epithelial cells.",
+      "c2s_expected_compartment": "fibroblast_caf"
+    },
+    "MSLN": {
+      "gene_symbol": "MSLN",
+      "common_alias": "Mesothelin",
+      "role": "Shedding positive control",
+      "cell_surface": true,
+      "topology": "GPI-anchor membrane protein",
+      "expected_outcome": "Soluble shed isoform documented (soluble mesothelin-related peptide / SMRP); shedding penalty applied."
+    },
+    "ERBB2": {
+      "gene_symbol": "ERBB2",
+      "common_alias": "HER2",
+      "role": "Shedding positive control",
+      "cell_surface": true,
+      "topology": "Single-pass type I membrane protein",
+      "expected_outcome": "Shed extracellular domain (sHER2 / ECD shedding) documented; cardiac and GI baseline expression noted."
+    },
+    "GAPDH": {
+      "gene_symbol": "GAPDH",
+      "common_alias": "GAPDH",
+      "role": "Selectivity negative control",
+      "cell_surface": false,
+      "topology": "Cytosolic / Nuclear",
+      "expected_outcome": "Fails tumour selectivity gate (ubiquitous housekeeping expression across all normal tissues)."
+    },
+    "MKI67": {
+      "gene_symbol": "MKI67",
+      "common_alias": "Ki-67",
+      "role": "Localisation negative control",
+      "cell_surface": false,
+      "topology": "Nuclear matrix protein",
+      "expected_outcome": "Fails cell-surface accessibility gate outright; evaluation terminates with fail_membrane_gate."
+    },
+    "TP53": {
+      "gene_symbol": "TP53",
+      "common_alias": "p53",
+      "role": "Localisation negative control",
+      "cell_surface": false,
+      "topology": "Nuclear transcription factor",
+      "expected_outcome": "Fails cell-surface accessibility gate outright; evaluation terminates with fail_membrane_gate."
+    },
+    "FOLH9": {
+      "gene_symbol": "FOLH9",
+      "common_alias": "FOLH9",
+      "role": "Abstention control",
+      "cell_surface": false,
+      "topology": null,
+      "expected_outcome": "Gene symbol not recognised by HGNC. Agent must abstain immediately without confabulating data."
+    }
+  }
+}
