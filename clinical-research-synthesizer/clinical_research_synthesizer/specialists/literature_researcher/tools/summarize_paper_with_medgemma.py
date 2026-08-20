@@ -41,7 +41,7 @@ def summarize_paper(full_text: str) -> str:
     if not endpoint_id:
         return "Error: MEDGEMMA_ENDPOINT_ID environment variable is not set."
 
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("CLOUD_ML_PROJECT_ID")
     # MedGemma is a deployed regional endpoint — use MEDGEMMA_LOCATION (not global)
     medgemma_location = os.environ.get("MEDGEMMA_LOCATION", "us-central1")
 

@@ -17,7 +17,7 @@
 from google.adk.agents import Agent
 from .tools import pmc_search
 
-MODEL = "gemini-3-flash-preview"
+MODEL = "gemini-2.5-flash"
 
 INSTRUCTION = """
 Your job is to find and return the full text of a research paper from PubMed Central.

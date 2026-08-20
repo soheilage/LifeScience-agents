@@ -40,14 +40,16 @@ def create_agent(env_vars):
         adk_app,
         display_name="clinical-research-synthesizer", # New agent name
         requirements=[
-            "google-adk>=0.2.1",
-            "google-cloud-aiplatform>=1.55.0",
-            "python-dotenv>=1.0.1",
-            "biopython>=1.83",
-            "pubchempy>=1.0.4",
-            "requests>=2.32.0",
-            "PyPDF2>=3.0.0",
-            "beautifulsoup4>=4.12.0",
+            "google-adk==1.15.1",
+            "google-cloud-aiplatform==1.119.0",
+            "python-dotenv==1.1.1",
+            "biopython==1.85",
+            "pubchempy==1.0.5",
+            "requests==2.32.5",
+            "PyPDF2==3.0.1",
+            "beautifulsoup4==4.14.2",
+            "pydantic==2.11.10",
+            "cloudpickle==3.1.1",
         ],
         extra_packages=["./clinical_research_synthesizer"],
         env_vars=env_vars,
@@ -88,7 +90,8 @@ def main(_):
     )
 
     # Env vars passed to the deployed agent at runtime.
-    env_vars["GOOGLE_CLOUD_PROJECT"] = project_id
+    # Note: GOOGLE_CLOUD_PROJECT is reserved by Agent Engine and automatically set by the runtime.
+    env_vars["CLOUD_ML_PROJECT_ID"] = project_id
     env_vars["GOOGLE_CLOUD_LOCATION"] = "global"  # For Gemini 3.x
     env_vars["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
     env_vars["MEDGEMMA_ENDPOINT_ID"] = os.getenv("MEDGEMMA_ENDPOINT_ID")

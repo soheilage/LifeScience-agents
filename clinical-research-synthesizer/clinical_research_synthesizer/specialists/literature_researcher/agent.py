@@ -25,7 +25,7 @@ from .tools import (
 )
 from ..search_specialist.tools import pmc_search
 
-MODEL = "gemini-3.1-pro-preview"
+MODEL = "gemini-2.5-pro"
 
 literature_researcher = Agent(
     name="literature_researcher",
