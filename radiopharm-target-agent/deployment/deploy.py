@@ -97,7 +97,6 @@ def main(_):
     location = FLAGS.location or os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
     bucket = FLAGS.bucket or os.getenv("GOOGLE_CLOUD_STORAGE_BUCKET")
 
-    # Load environment variables for the agent engine runtime
     env_vars["GEMINI_MODEL_ID"] = os.getenv("GEMINI_MODEL_ID", "gemini-2.5-pro")
     env_vars["TXGEMMA_CHAT_ENDPOINT_ID"] = os.getenv("TXGEMMA_CHAT_ENDPOINT_ID", "")
     env_vars["TXGEMMA_PREDICT_ENDPOINT_ID"] = os.getenv("TXGEMMA_PREDICT_ENDPOINT_ID", "")
@@ -110,6 +109,9 @@ def main(_):
     env_vars["GOOGLE_GENAI_USE_VERTEXAI"] = "true"
     env_vars["GOOGLE_CLOUD_LOCATION"] = location
     env_vars["CLOUD_ML_PROJECT_ID"] = project_id
+
+    # Filter out empty env vars (Vertex AI Reasoning Engine API rejects empty string values)
+    env_vars = {k: v for k, v in env_vars.items() if v and str(v).strip()}
 
     if FLAGS.create:
         if not all([project_id, location, bucket]):
