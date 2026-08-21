@@ -136,8 +136,14 @@
 ---
 
 ### R4 — SME Sign-Off Record & Mechanism Conditioning
-- **Verified Sign-Off (2026-08-21)**: Radiopharmacy & Nuclear Medicine SME panel verified and documented in [`weights.yaml`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/weights.yaml).
-- **Conditioning Rules**:
-  - *BBB Protection*: Hydrophilic peptides ($V_d < 0.05\text{ L/kg}$) vs lipophilic small molecules ($\log D > 2.0$) under intact BBB vs compromised tumor vasculature in brain metastases.
-  - *Renal Reabsorption*: Glomerular filtration and proximal tubular endocytosis via megalin/cubilin is restricted to low-MW peptides ($< 30\text{ kDa}$); excluded for IgGs ($\sim 150\text{ kDa}$).
+- **Status:** **`PENDING (Awaiting Named Human SME Confirmation)`**
+- **Reason for Reopening:** Agent-authored record without named human SME. R4 requires a named, dated human sign-off with external affiliation.
+- **Schema Guard Implemented (`SMESignOffRecord`)**:
+  - Implemented `SMESignOffRecord` and `validate_sme_signoff_block` in [`schemas.py`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/radiopharm_target_agent/schemas.py). Any sign-off block with an empty or whitespace `reviewer_name` raises `ValidationError` and refuses to validate.
+  - Added unit test `test_sme_signoff_schema_guard_rejects_empty_reviewer` in [`test_schemas.py`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/tests/test_schemas.py). Unnamed sign-off records are rejected.
+- **Provisional Status Notice Active**:
+  - All emitted Scorecards and System Health Banners now carry an explicit `PROVISIONAL STATUS NOTICE (R4 Pending SME Confirmation)` warning line.
+- **Consultation Document Created**:
+  - Generated [`sme_consultation_request.md`](file:///Users/soheila/adk-workspace/txgemma_demo/radiopharm-target-agent/sme_consultation_request.md) isolating the 4 numeric thresholds ($V_d < 0.05\text{ L/kg}$, $\log D < 0 / > 2$, $30\text{ kDa}$, $150\text{ kDa}$ IgG) and 5 consultation questions for human peer review.
+
 

@@ -158,6 +158,8 @@ def format_provenance_banner(
         f"- **TxGemma Endpoints:** Chat: `{prov_obj.endpoint_health_status.get('txgemma_chat', 'unavailable')}` | ClinTox: `{prov_obj.endpoint_health_status.get('txgemma_clintox', 'unavailable')}`",
         f"- **MedGemma Endpoint:** `{prov_obj.endpoint_health_status.get('medgemma', 'unavailable')}`",
         f"- **Cell2Sentence Engine:** `{prov_obj.endpoint_health_status.get('cell2sentence', 'local fallback')}`",
+        "- **SME Verification Status:** `PENDING (Awaiting Named Human SME Confirmation)`",
+        "> **PROVISIONAL STATUS NOTICE (R4 Pending SME Confirmation):** The Organ-at-Risk (OAR) safety margin axis and pharmacokinetic class liability rules (BBB penetration exclusion and renal megalin/cubilin reabsorption penalties) currently rest on mechanism models awaiting formal named human SME verification.",
     ]
 
     # Surface Single-Cell Atlas Routing Decision

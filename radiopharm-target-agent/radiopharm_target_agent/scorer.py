@@ -882,6 +882,8 @@ def generate_target_scorecard_table(
         f"### Target Prioritisation Scorecard: `{scorecard.target}`",
         f"- **Recommendation:** `{scorecard.recommendation.upper()}` | **Total Score:** **{scorecard.total_score if scorecard.total_score is not None else 'WITHHELD'}/10.0**",
         f"- **Indication:** `{bundle.indication}` | **Isotope Context:** `{scorecard.isotope_context}` | **Vector Class:** `{scorecard.vector_class}` | **Build SHA:** `{scorecard.provenance.build_sha or '1e7b341'}`",
+        f"- **SME Verification Status:** `PENDING (Awaiting Named Human SME Confirmation)`",
+        "> **PROVISIONAL STATUS NOTICE (R4 Pending SME Confirmation):** Organ-at-Risk (OAR) safety scores and PK class liability rules currently rest on mechanism models awaiting formal named human SME verification.",
         "",
         "| Evaluation Axis | Score (/10) | Weight | Weighted Score | Status | Rationale |",
         "| :--- | :---: | :---: | :---: | :---: | :--- |",

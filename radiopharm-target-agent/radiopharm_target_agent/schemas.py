@@ -21,7 +21,45 @@ contracts according to Section 1 and Section 2 of the implementation plan.
 
 from datetime import datetime, timezone
 from typing import Any, Literal
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class SMESignOffRecord(BaseModel):
+    """
+    R4 Schema Guard: Human SME Sign-Off Data Contract.
+    Refuses to load/parse if reviewer_name or required reviewer fields are empty.
+    """
+
+    reviewer_name: str
+    reviewer_role: str
+    reviewer_affiliation: str
+    date: str  # YYYY-MM-DD
+    claims_reviewed: list[str]
+    verdict: Literal["confirmed", "confirmed_with_conditions", "rejected"]
+
+    @field_validator("reviewer_name", "reviewer_role", "reviewer_affiliation")
+    @classmethod
+    def validate_non_empty_strings(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("SME sign-off field cannot be empty or whitespace. A named human reviewer is required.")
+        return v.strip()
+
+    @field_validator("claims_reviewed")
+    @classmethod
+    def validate_non_empty_claims(cls, v: list[str]) -> list[str]:
+        if not v or len(v) == 0:
+            raise ValueError("SME sign-off must list at least one claim reviewed.")
+        return v
+
+
+def validate_sme_signoff_block(data: dict[str, Any] | None) -> SMESignOffRecord:
+    """
+    Validates a raw sme_signoff dictionary block.
+    Raises ValueError if data is missing, incomplete, or reviewer_name is empty.
+    """
+    if not data or not isinstance(data, dict):
+        raise ValueError("Missing or invalid 'sme_signoff' block. A named human SME sign-off record is required.")
+    return SMESignOffRecord(**data)
 
 
 class SourceRef(BaseModel):

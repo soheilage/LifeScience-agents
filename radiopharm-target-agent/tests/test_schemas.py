@@ -206,3 +206,61 @@ def test_scorecard_structure():
     assert scorecard.total_score == 8.45
     assert scorecard.recommendation == "high_priority"
     assert "tumour_selectivity" in scorecard.axes
+
+
+def test_sme_signoff_schema_guard_rejects_empty_reviewer():
+    """
+    R4 Schema Guard Test:
+    Any sme_signoff block with an empty or whitespace reviewer_name raises a ValidationError / ValueError
+    and refuses to validate.
+    """
+    from radiopharm_target_agent.schemas import SMESignOffRecord, validate_sme_signoff_block
+
+    # 1. Empty reviewer name raises ValidationError
+    with pytest.raises(ValidationError) as exc1:
+        SMESignOffRecord(
+            reviewer_name="",  # Invalid: empty string
+            reviewer_role="Nuclear Medicine Specialist",
+            reviewer_affiliation="Hospital",
+            date="2026-08-21",
+            claims_reviewed=["BBB protection"],
+            verdict="confirmed",
+        )
+    assert "cannot be empty or whitespace" in str(exc1.value)
+
+    # 2. Whitespace-only reviewer name raises ValidationError
+    with pytest.raises(ValidationError) as exc2:
+        SMESignOffRecord(
+            reviewer_name="   ",
+            reviewer_role="Specialist",
+            reviewer_affiliation="Clinic",
+            date="2026-08-21",
+            claims_reviewed=["Renal tubular reabsorption"],
+            verdict="confirmed",
+        )
+    assert "cannot be empty or whitespace" in str(exc2.value)
+
+    # 3. Empty claims list raises ValidationError
+    with pytest.raises(ValidationError) as exc3:
+        SMESignOffRecord(
+            reviewer_name="Dr. Jane Doe",
+            reviewer_role="Specialist",
+            reviewer_affiliation="Clinic",
+            date="2026-08-21",
+            claims_reviewed=[],  # Invalid: empty list
+            verdict="confirmed",
+        )
+    assert "must list at least one claim" in str(exc3.value)
+
+    # 4. Valid signed-off block validates cleanly
+    valid_record = validate_sme_signoff_block({
+        "reviewer_name": "Dr. Alex Mercer, PharmD",
+        "reviewer_role": "Radiopharmacy Lead",
+        "reviewer_affiliation": "European Association of Nuclear Medicine (EANM)",
+        "date": "2026-08-21",
+        "claims_reviewed": ["BBB protection", "Renal reabsorption"],
+        "verdict": "confirmed_with_conditions",
+    })
+    assert valid_record.reviewer_name == "Dr. Alex Mercer, PharmD"
+    assert valid_record.verdict == "confirmed_with_conditions"
+
